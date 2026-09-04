@@ -20,6 +20,9 @@
   --sound: #6ec8d4;
   --sound-bg: rgba(110, 200, 212, 0.12);
   --sound-line: rgba(110, 200, 212, 0.38);
+  --extra: #c9a0e8;
+  --extra-bg: rgba(201, 160, 232, 0.12);
+  --extra-line: rgba(201, 160, 232, 0.38);
   --custom: #7eb6ff;
   --custom-bg: rgba(126, 182, 255, 0.1);
   --custom-line: rgba(126, 182, 255, 0.32);

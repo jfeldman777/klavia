@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   ALL_KEYS,
   DEFAULT_LAYOUT,
+  EXTRA_ASSIGNMENTS,
   HOMOGLYPHS,
   PHONETICS,
   SEMI_HOMOGLYPHS,
@@ -66,10 +67,16 @@ export function LayoutEditor() {
   }, [duplicates]);
 
   const counts = useMemo(() => {
-    const c = { homoglyph: 0, semi: 0, phonetic: 0, custom: 0 };
+    const c = { homoglyph: 0, semi: 0, phonetic: 0, extra: 0, custom: 0 };
     for (const key of ALL_KEYS) {
       const kind = layout[key.id]?.kind;
-      if (kind === "homoglyph" || kind === "semi" || kind === "phonetic" || kind === "custom") {
+      if (
+        kind === "homoglyph" ||
+        kind === "semi" ||
+        kind === "phonetic" ||
+        kind === "extra" ||
+        kind === "custom"
+      ) {
         if (layout[key.id]?.cyrillic) c[kind] += 1;
       }
     }
@@ -127,6 +134,10 @@ export function LayoutEditor() {
           <LegendDot
             color="var(--sound)"
             label={`Звук · ${counts.phonetic}`}
+          />
+          <LegendDot
+            color="var(--extra)"
+            label={`Доп. · ${counts.extra}`}
           />
           <LegendDot
             color="var(--custom)"
@@ -195,7 +206,7 @@ function PairChip({
 }: {
   lat: string;
   cyr: string;
-  tone: "match" | "semi" | "sound";
+  tone: "match" | "semi" | "sound" | "extra";
 }) {
   const styles = {
     match:
@@ -203,6 +214,8 @@ function PairChip({
     semi: "border-[var(--semi-line)] bg-[var(--semi-bg)] text-[var(--semi)]",
     sound:
       "border-[var(--sound-line)] bg-[var(--sound-bg)] text-[var(--sound)]",
+    extra:
+      "border-[var(--extra-line)] bg-[var(--extra-bg)] text-[var(--extra)]",
   }[tone];
 
   return (
@@ -257,6 +270,20 @@ function PairTables() {
         <ul className="mt-5 flex flex-wrap gap-2">
           {Object.entries(PHONETICS).map(([lat, cyr]) => (
             <PairChip key={lat} lat={lat} cyr={cyr} tone="sound" />
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+          Дополнительные назначения
+        </h2>
+        <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
+          Зафиксированы в схеме: Й на I, Ч на S.
+        </p>
+        <ul className="mt-5 flex flex-wrap gap-2">
+          {Object.entries(EXTRA_ASSIGNMENTS).map(([lat, cyr]) => (
+            <PairChip key={lat} lat={lat} cyr={cyr} tone="extra" />
           ))}
         </ul>
       </div>

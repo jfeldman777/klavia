@@ -28,6 +28,7 @@ const HINT: Record<string, { label: string; color: string }> = {
     color: "text-[var(--semi)]",
   },
   phonetic: { label: "Звуковое совпадение", color: "text-[var(--sound)]" },
+  extra: { label: "Доп. назначение", color: "text-[var(--extra)]" },
 };
 
 export function LetterPicker({
@@ -71,7 +72,8 @@ export function LetterPicker({
           {mapping.locked ||
           mapping.kind === "homoglyph" ||
           mapping.kind === "semi" ||
-          mapping.kind === "phonetic" ? (
+          mapping.kind === "phonetic" ||
+          mapping.kind === "extra" ? (
             <Button variant="secondary" size="sm" onClick={onToggleLock}>
               {mapping.locked ? (
                 <>
@@ -122,6 +124,10 @@ export function LetterPicker({
                   matchHint &&
                   suggestion?.kind === "phonetic" &&
                   "border-[var(--sound-line)] bg-[var(--sound-bg)] text-[var(--sound)]",
+                !active &&
+                  matchHint &&
+                  suggestion?.kind === "extra" &&
+                  "border-[var(--extra-line)] bg-[var(--extra-bg)] text-[var(--extra)]",
                 !active &&
                   !matchHint &&
                   "border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)] hover:border-[var(--ink-faint)]",

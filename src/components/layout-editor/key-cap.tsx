@@ -34,6 +34,12 @@ const KIND_STYLES: Record<
     text: "text-[var(--sound)]",
     dot: "bg-[var(--sound)]",
   },
+  extra: {
+    border: "border-[var(--extra-line)]",
+    bg: "bg-[var(--extra-bg)]",
+    text: "text-[var(--extra)]",
+    dot: "bg-[var(--extra)]",
+  },
   custom: {
     border: "border-[var(--custom-line)]",
     bg: "bg-[var(--custom-bg)]",

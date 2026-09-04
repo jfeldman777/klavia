@@ -47,6 +47,7 @@ export type MappingKind =
   | "homoglyph"
   | "semi"
   | "phonetic"
+  | "extra"
   | "custom"
   | "empty";
 
@@ -86,6 +87,16 @@ export const PHONETICS: Record<string, string> = {
   Z: "З",
   L: "Л",
   U: "Ю",
+  F: "Ф",
+};
+
+/**
+ * Дополнительные назначения (Й←I, Ч←S и т.п.) —
+ * не графика и не классический звук, но зафиксированы в схеме.
+ */
+export const EXTRA_ASSIGNMENTS: Record<string, string> = {
+  I: "Й",
+  S: "Ч",
 };
 
 export const CYRILLIC_ALPHABET = [
@@ -201,25 +212,27 @@ export const DEFAULT_LAYOUT: Record<KeyId, KeyMapping> = {
   KeyZ: { cyrillic: "З", kind: "phonetic", locked: true },
   KeyL: { cyrillic: "Л", kind: "phonetic", locked: true },
   KeyU: { cyrillic: "Ю", kind: "phonetic", locked: true },
+  KeyF: { cyrillic: "Ф", kind: "phonetic", locked: true },
+
+  // Доп. назначения
+  KeyI: { cyrillic: "Й", kind: "extra", locked: true },
+  KeyS: { cyrillic: "Ч", kind: "extra", locked: true },
 
   // Остальные — отдельно
-  KeyQ: { cyrillic: "Й", kind: "custom" },
+  KeyQ: { cyrillic: "П", kind: "custom" },
   KeyW: { cyrillic: "Ш", kind: "custom" },
-  KeyI: { cyrillic: "П", kind: "custom" },
   BracketLeft: { cyrillic: "Ъ", kind: "custom" },
   BracketRight: { cyrillic: "Ё", kind: "custom" },
-  KeyS: { cyrillic: "Ы", kind: "custom" },
-  KeyF: { cyrillic: "Ф", kind: "custom" },
   Semicolon: { cyrillic: "Э", kind: "custom" },
   Quote: { cyrillic: "Ь", kind: "custom" },
   KeyV: { cyrillic: "Б", kind: "custom" },
   Comma: { cyrillic: "Ц", kind: "custom" },
-  Period: { cyrillic: "Ч", kind: "custom" },
+  Period: { cyrillic: "Ы", kind: "custom" },
   Slash: { cyrillic: "Щ", kind: "custom" },
 };
 
 /** Bump при смене дефолтной схемы, чтобы не тянуть старый localStorage. */
-export const STORAGE_KEY = "sovpad-layout-v2";
+export const STORAGE_KEY = "sovpad-layout-v3";
 
 export function kindForLatinLetter(
   latin: string,
@@ -229,6 +242,7 @@ export function kindForLatinLetter(
   if (HOMOGLYPHS[latin]?.toUpperCase() === upper) return "homoglyph";
   if (SEMI_HOMOGLYPHS[latin]?.toUpperCase() === upper) return "semi";
   if (PHONETICS[latin]?.toUpperCase() === upper) return "phonetic";
+  if (EXTRA_ASSIGNMENTS[latin]?.toUpperCase() === upper) return "extra";
   return "custom";
 }
 
@@ -241,6 +255,8 @@ export function suggestedForLatin(latin: string): {
   if (SEMI_HOMOGLYPHS[latin])
     return { letter: SEMI_HOMOGLYPHS[latin], kind: "semi" };
   if (PHONETICS[latin]) return { letter: PHONETICS[latin], kind: "phonetic" };
+  if (EXTRA_ASSIGNMENTS[latin])
+    return { letter: EXTRA_ASSIGNMENTS[latin], kind: "extra" };
   return null;
 }
 
@@ -309,7 +325,7 @@ export function exportLayoutJson(layout: Record<KeyId, KeyMapping>): string {
     {
       name: "Совпад",
       description:
-        "Русская раскладка: графические совпадения, полусовпадения (Я←R, И←N) и звуковые (Г←G…).",
+        "Русская раскладка: графика, полусовпадения, звук (в т.ч. Ф←F), доп. Й←I · Ч←S.",
       version: 2,
       rows,
     },

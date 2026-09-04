@@ -23,14 +23,16 @@ export default function Home() {
             Совпад
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--ink-muted)] animate-rise-delay">
-            Графика на той же клавише:{" "}
+            Графика:{" "}
             <span className="text-[var(--match)]">О←O · Р←P · В←B · М←M</span>.
             Полусовпадения:{" "}
             <span className="text-[var(--semi)]">Я←R · И←N</span>. Звук:{" "}
             <span className="text-[var(--sound)]">
-              Г←G · Д←D · Ж←J · З←Z · Л←L · Ю←U
+              Г←G · Д←D · Ж←J · З←Z · Л←L · Ю←U · Ф←F
             </span>
-            . Остальное задаёте сами.
+            . Доп.:{" "}
+            <span className="text-[var(--extra)]">Й←I · Ч←S</span>. Остальное —
+            сами.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 animate-rise-delay-2">
             <a
