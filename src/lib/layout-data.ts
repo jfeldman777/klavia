@@ -48,6 +48,7 @@ export type MappingKind =
   | "semi"
   | "phonetic"
   | "extra"
+  | "layer"
   | "custom"
   | "empty";
 
@@ -56,6 +57,34 @@ export type KeyMapping = {
   kind: MappingKind;
   locked?: boolean;
 };
+
+/** Клавиша, которая открывает миниклавиатуру оставшихся букв. */
+export const LAYER_KEY_ID: KeyId = "KeyQ";
+
+export type LayerSlot = {
+  /** Подпись на миниклавише (1–0). */
+  shortcut: string;
+  /** KeyboardEvent.code для второго нажатия. */
+  code: string;
+  letter: string;
+};
+
+/**
+ * Оставшиеся буквы без своего места на основной раскладке.
+ * Набор: Q → миника → цифра/клик.
+ */
+export const DEFAULT_LAYER: LayerSlot[] = [
+  { shortcut: "1", code: "Digit1", letter: "Б" },
+  { shortcut: "2", code: "Digit2", letter: "П" },
+  { shortcut: "3", code: "Digit3", letter: "Ш" },
+  { shortcut: "4", code: "Digit4", letter: "Щ" },
+  { shortcut: "5", code: "Digit5", letter: "Ц" },
+  { shortcut: "6", code: "Digit6", letter: "Ъ" },
+  { shortcut: "7", code: "Digit7", letter: "Ы" },
+  { shortcut: "8", code: "Digit8", letter: "Ь" },
+  { shortcut: "9", code: "Digit9", letter: "Э" },
+  { shortcut: "0", code: "Digit0", letter: "Ё" },
+];
 
 /** Полные графические совпадения: буква выглядит почти одинаково. */
 export const HOMOGLYPHS: Record<string, string> = {
@@ -218,21 +247,30 @@ export const DEFAULT_LAYOUT: Record<KeyId, KeyMapping> = {
   KeyI: { cyrillic: "Й", kind: "extra", locked: true },
   KeyS: { cyrillic: "Ч", kind: "extra", locked: true },
 
-  // Остальные — отдельно
-  KeyQ: { cyrillic: "П", kind: "custom" },
-  KeyW: { cyrillic: "Ш", kind: "custom" },
-  BracketLeft: { cyrillic: "Ъ", kind: "custom" },
-  BracketRight: { cyrillic: "Ё", kind: "custom" },
-  Semicolon: { cyrillic: "Э", kind: "custom" },
-  Quote: { cyrillic: "Ь", kind: "custom" },
-  KeyV: { cyrillic: "Б", kind: "custom" },
-  Comma: { cyrillic: "Ц", kind: "custom" },
-  Period: { cyrillic: "Ы", kind: "custom" },
-  Slash: { cyrillic: "Щ", kind: "custom" },
+  // Портал миниклавиатуры для оставшихся букв
+  KeyQ: { cyrillic: null, kind: "layer", locked: true },
+
+  // Свободные клавиши (буквы — только через Q → миника)
+  KeyW: { cyrillic: null, kind: "empty" },
+  BracketLeft: { cyrillic: null, kind: "empty" },
+  BracketRight: { cyrillic: null, kind: "empty" },
+  Semicolon: { cyrillic: null, kind: "empty" },
+  Quote: { cyrillic: null, kind: "empty" },
+  KeyV: { cyrillic: null, kind: "empty" },
+  Comma: { cyrillic: null, kind: "empty" },
+  Period: { cyrillic: null, kind: "empty" },
+  Slash: { cyrillic: null, kind: "empty" },
 };
 
 /** Bump при смене дефолтной схемы, чтобы не тянуть старый localStorage. */
-export const STORAGE_KEY = "sovpad-layout-v3";
+export const STORAGE_KEY = "sovpad-layout-v4";
+export const LAYER_STORAGE_KEY = "sovpad-layer-v4";
+
+export function cloneLayer(
+  layer: LayerSlot[] = DEFAULT_LAYER,
+): LayerSlot[] {
+  return layer.map((s) => ({ ...s }));
+}
 
 export function kindForLatinLetter(
   latin: string,
@@ -265,34 +303,51 @@ export function cloneLayout(
 ): Record<KeyId, KeyMapping> {
   const next = {} as Record<KeyId, KeyMapping>;
   for (const key of ALL_KEYS) {
-    next[key.id] = { ...layout[key.id] };
+    next[key.id] = { ...(layout[key.id] ?? { cyrillic: null, kind: "empty" }) };
   }
   return next;
 }
 
-export function usedLetters(layout: Record<KeyId, KeyMapping>): Set<string> {
+export function usedLetters(
+  layout: Record<KeyId, KeyMapping>,
+  layer: LayerSlot[] = [],
+): Set<string> {
   const set = new Set<string>();
   for (const key of ALL_KEYS) {
     const letter = layout[key.id]?.cyrillic;
     if (letter) set.add(letter.toUpperCase());
   }
+  for (const slot of layer) {
+    if (slot.letter) set.add(slot.letter.toUpperCase());
+  }
   return set;
 }
 
-export function missingLetters(layout: Record<KeyId, KeyMapping>): string[] {
-  const used = usedLetters(layout);
+export function missingLetters(
+  layout: Record<KeyId, KeyMapping>,
+  layer: LayerSlot[] = [],
+): string[] {
+  const used = usedLetters(layout, layer);
   return CYRILLIC_ALPHABET.filter((l) => !used.has(l));
 }
 
 export function duplicateLetters(
   layout: Record<KeyId, KeyMapping>,
-): Map<string, KeyId[]> {
-  const map = new Map<string, KeyId[]>();
+  layer: LayerSlot[] = [],
+): Map<string, string[]> {
+  const map = new Map<string, string[]>();
   for (const key of ALL_KEYS) {
     const letter = layout[key.id]?.cyrillic?.toUpperCase();
     if (!letter) continue;
     const list = map.get(letter) ?? [];
     list.push(key.id);
+    map.set(letter, list);
+  }
+  for (const slot of layer) {
+    const letter = slot.letter?.toUpperCase();
+    if (!letter) continue;
+    const list = map.get(letter) ?? [];
+    list.push(`layer:${slot.shortcut}`);
     map.set(letter, list);
   }
   for (const [letter, keys] of map) {
@@ -306,13 +361,25 @@ export function layoutToCodeMap(
 ): Record<string, string> {
   const map: Record<string, string> = {};
   for (const key of ALL_KEYS) {
+    if (layout[key.id]?.kind === "layer") continue;
     const letter = layout[key.id]?.cyrillic;
     if (letter) map[key.id] = letter;
   }
   return map;
 }
 
-export function exportLayoutJson(layout: Record<KeyId, KeyMapping>): string {
+export function layerCodeMap(layer: LayerSlot[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const slot of layer) {
+    if (slot.letter) map[slot.code] = slot.letter;
+  }
+  return map;
+}
+
+export function exportLayoutJson(
+  layout: Record<KeyId, KeyMapping>,
+  layer: LayerSlot[] = DEFAULT_LAYER,
+): string {
   const rows = KEYBOARD_ROWS.map((row) =>
     row.map((key) => ({
       key: key.latin,
@@ -325,8 +392,10 @@ export function exportLayoutJson(layout: Record<KeyId, KeyMapping>): string {
     {
       name: "Совпад",
       description:
-        "Русская раскладка: графика, полусовпадения, звук (в т.ч. Ф←F), доп. Й←I · Ч←S.",
-      version: 2,
+        "Графика / полусовпадения / звук / доп.; оставшиеся — через Q → миниклавиатура.",
+      version: 4,
+      layerKey: "Q",
+      layer,
       rows,
     },
     null,
@@ -334,15 +403,19 @@ export function exportLayoutJson(layout: Record<KeyId, KeyMapping>): string {
   );
 }
 
-export function exportLinuxXkbHint(layout: Record<KeyId, KeyMapping>): string {
+export function exportLinuxXkbHint(
+  layout: Record<KeyId, KeyMapping>,
+  layer: LayerSlot[] = DEFAULT_LAYER,
+): string {
   const lines = [
-    "// Фрагмент для xkb (symbols). Подставьте в свой файл раскладки.",
+    "// Фрагмент для xkb (symbols). Минислой Q в xkb обычно делают через level/compose — здесь только прямые клавиши.",
     "partial alphanumeric_keys",
     'xkb_symbols "sovpad" {',
     '    name[Group1]= "Russian (Sovpad)";',
     "",
   ];
   for (const key of ALL_KEYS) {
+    if (layout[key.id]?.kind === "layer") continue;
     const letter = layout[key.id]?.cyrillic;
     if (!letter) continue;
     const lower = letter.toLowerCase();
@@ -351,6 +424,13 @@ export function exportLinuxXkbHint(layout: Record<KeyId, KeyMapping>): string {
       `    key <${xkbKeysym(key.id)}> { [ ${unicodeName(lower)}, ${unicodeName(upper)} ] };`,
     );
   }
+  lines.push(
+    "",
+    "    // Минислой (в браузере: Q затем цифра):",
+    ...layer.map(
+      (s) => `    //   Q → ${s.shortcut} → ${s.letter}`,
+    ),
+  );
   lines.push("};", "");
   return lines.join("\n");
 }

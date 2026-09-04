@@ -40,6 +40,12 @@ const KIND_STYLES: Record<
     text: "text-[var(--extra)]",
     dot: "bg-[var(--extra)]",
   },
+  layer: {
+    border: "border-[var(--layer-line)]",
+    bg: "bg-[var(--layer-bg)]",
+    text: "text-[var(--layer)]",
+    dot: "bg-[var(--layer)]",
+  },
   custom: {
     border: "border-[var(--custom-line)]",
     bg: "bg-[var(--custom-bg)]",
@@ -69,7 +75,11 @@ export function KeyCap({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      aria-label={`${meta.latin}: ${letter ?? "пусто"}`}
+      aria-label={
+        kind === "layer"
+          ? `${meta.latin}: миниклавиатура`
+          : `${meta.latin}: ${letter ?? "пусто"}`
+      }
       className={cn(
         "group relative flex h-[3.35rem] min-w-[2.85rem] flex-1 flex-col items-stretch justify-between rounded-[10px] border px-1.5 py-1 text-left transition-all duration-150",
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
@@ -91,7 +101,7 @@ export function KeyCap({
           styles.text,
         )}
       >
-        {letter ?? "·"}
+        {kind === "layer" ? "⋯" : (letter ?? "·")}
       </span>
       {styles.dot && (
         <span

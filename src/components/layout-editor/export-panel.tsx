@@ -7,19 +7,23 @@ import {
   exportLinuxXkbHint,
   type KeyId,
   type KeyMapping,
+  type LayerSlot,
 } from "@/lib/layout-data";
 import { Check, Copy, Download } from "lucide-react";
 
 type Props = {
   layout: Record<KeyId, KeyMapping>;
+  layer: LayerSlot[];
 };
 
-export function ExportPanel({ layout }: Props) {
+export function ExportPanel({ layout, layer }: Props) {
   const [tab, setTab] = useState<"json" | "xkb">("json");
   const [copied, setCopied] = useState(false);
 
   const content =
-    tab === "json" ? exportLayoutJson(layout) : exportLinuxXkbHint(layout);
+    tab === "json"
+      ? exportLayoutJson(layout, layer)
+      : exportLinuxXkbHint(layout, layer);
 
   const copy = async () => {
     await navigator.clipboard.writeText(content);
@@ -34,7 +38,8 @@ export function ExportPanel({ layout }: Props) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = tab === "json" ? "sovpad-layout.json" : "sovpad-xkb-symbols.txt";
+    a.download =
+      tab === "json" ? "sovpad-layout.json" : "sovpad-xkb-symbols.txt";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -47,7 +52,7 @@ export function ExportPanel({ layout }: Props) {
             Экспорт
           </p>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            JSON для сохранения или фрагмент xkb для Linux.
+            JSON (с миниклавиатурой Q) или фрагмент xkb.
           </p>
         </div>
         <div className="flex gap-2">

@@ -5,15 +5,20 @@ import { Keyboard } from "./keyboard";
 import { LetterPicker } from "./letter-picker";
 import { TypingTester } from "./typing-tester";
 import { ExportPanel } from "./export-panel";
+import { MiniKeyboard } from "./mini-keyboard";
 import { Button } from "@/components/ui/button";
 import {
   ALL_KEYS,
+  CYRILLIC_ALPHABET,
   DEFAULT_LAYOUT,
   EXTRA_ASSIGNMENTS,
   HOMOGLYPHS,
+  LAYER_KEY_ID,
+  LAYER_STORAGE_KEY,
   PHONETICS,
   SEMI_HOMOGLYPHS,
   STORAGE_KEY,
+  cloneLayer,
   cloneLayout,
   duplicateLetters,
   kindForLatinLetter,
@@ -21,6 +26,7 @@ import {
   usedLetters,
   type KeyId,
   type KeyMapping,
+  type LayerSlot,
 } from "@/lib/layout-data";
 import { RotateCcw } from "lucide-react";
 
@@ -28,8 +34,13 @@ export function LayoutEditor() {
   const [layout, setLayout] = useState<Record<KeyId, KeyMapping>>(() =>
     cloneLayout(),
   );
+  const [layer, setLayer] = useState<LayerSlot[]>(() => cloneLayer());
   const [selectedId, setSelectedId] = useState<KeyId | null>("KeyO");
   const [pressedId, setPressedId] = useState<KeyId | null>(null);
+  const [layerOpen, setLayerOpen] = useState(false);
+  const [selectedLayerShortcut, setSelectedLayerShortcut] = useState<
+    string | null
+  >("1");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -38,6 +49,10 @@ export function LayoutEditor() {
       if (raw) {
         const parsed = JSON.parse(raw) as Record<KeyId, KeyMapping>;
         setLayout(cloneLayout({ ...DEFAULT_LAYOUT, ...parsed }));
+      }
+      const layerRaw = localStorage.getItem(LAYER_STORAGE_KEY);
+      if (layerRaw) {
+        setLayer(cloneLayer(JSON.parse(layerRaw) as LayerSlot[]));
       }
     } catch {
       /* ignore */
@@ -50,24 +65,41 @@ export function LayoutEditor() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
   }, [layout, hydrated]);
 
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(LAYER_STORAGE_KEY, JSON.stringify(layer));
+  }, [layer, hydrated]);
+
   const selected = useMemo(
     () => ALL_KEYS.find((k) => k.id === selectedId) ?? null,
     [selectedId],
   );
 
-  const used = useMemo(() => usedLetters(layout), [layout]);
-  const missing = useMemo(() => missingLetters(layout), [layout]);
-  const duplicates = useMemo(() => duplicateLetters(layout), [layout]);
+  const used = useMemo(() => usedLetters(layout, layer), [layout, layer]);
+  const missing = useMemo(() => missingLetters(layout, layer), [layout, layer]);
+  const duplicates = useMemo(
+    () => duplicateLetters(layout, layer),
+    [layout, layer],
+  );
   const conflictIds = useMemo(() => {
     const set = new Set<KeyId>();
     for (const keys of duplicates.values()) {
-      for (const id of keys) set.add(id);
+      for (const id of keys) {
+        if (!id.startsWith("layer:")) set.add(id as KeyId);
+      }
     }
     return set;
   }, [duplicates]);
 
   const counts = useMemo(() => {
-    const c = { homoglyph: 0, semi: 0, phonetic: 0, extra: 0, custom: 0 };
+    const c = {
+      homoglyph: 0,
+      semi: 0,
+      phonetic: 0,
+      extra: 0,
+      layer: 0,
+      custom: 0,
+    };
     for (const key of ALL_KEYS) {
       const kind = layout[key.id]?.kind;
       if (
@@ -79,6 +111,7 @@ export function LayoutEditor() {
       ) {
         if (layout[key.id]?.cyrillic) c[kind] += 1;
       }
+      if (kind === "layer") c.layer = 1;
     }
     return c;
   }, [layout]);
@@ -88,7 +121,7 @@ export function LayoutEditor() {
       if (!selectedId) return;
       setLayout((prev) => {
         const current = prev[selectedId];
-        if (current.locked) return prev;
+        if (current.locked || current.kind === "layer") return prev;
         const latin = ALL_KEYS.find((k) => k.id === selectedId)?.latin ?? "";
         return {
           ...prev,
@@ -101,6 +134,20 @@ export function LayoutEditor() {
       });
     },
     [selectedId],
+  );
+
+  const assignLayerLetter = useCallback(
+    (letter: string) => {
+      if (!selectedLayerShortcut) return;
+      setLayer((prev) =>
+        prev.map((slot) =>
+          slot.shortcut === selectedLayerShortcut
+            ? { ...slot, letter: letter.toUpperCase() }
+            : slot,
+        ),
+      );
+    },
+    [selectedLayerShortcut],
   );
 
   const toggleLock = useCallback(() => {
@@ -116,7 +163,14 @@ export function LayoutEditor() {
 
   const reset = () => {
     setLayout(cloneLayout());
+    setLayer(cloneLayer());
     setSelectedId("KeyO");
+    setLayerOpen(false);
+  };
+
+  const handleSelectKey = (id: KeyId) => {
+    setSelectedId(id);
+    if (id === LAYER_KEY_ID) setLayerOpen(true);
   };
 
   return (
@@ -135,13 +189,10 @@ export function LayoutEditor() {
             color="var(--sound)"
             label={`Звук · ${counts.phonetic}`}
           />
+          <LegendDot color="var(--extra)" label={`Доп. · ${counts.extra}`} />
           <LegendDot
-            color="var(--extra)"
-            label={`Доп. · ${counts.extra}`}
-          />
-          <LegendDot
-            color="var(--custom)"
-            label={`Отдельно · ${counts.custom}`}
+            color="var(--layer)"
+            label={`Q-слой · ${layer.length}`}
           />
         </div>
         <Button variant="secondary" size="sm" onClick={reset}>
@@ -154,8 +205,31 @@ export function LayoutEditor() {
         selectedId={selectedId}
         pressedId={pressedId}
         conflicts={conflictIds}
-        onSelect={setSelectedId}
+        onSelect={handleSelectKey}
       />
+
+      {selectedId === LAYER_KEY_ID && (
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+          <MiniKeyboard
+            open
+            layer={layer}
+            onClose={() => setSelectedId("KeyO")}
+            onPick={() => undefined}
+            editable
+            selectedShortcut={selectedLayerShortcut}
+            onSelectSlot={setSelectedLayerShortcut}
+          />
+          <LayerLetterEditor
+            shortcut={selectedLayerShortcut}
+            letter={
+              layer.find((s) => s.shortcut === selectedLayerShortcut)?.letter ??
+              null
+            }
+            used={used}
+            onAssign={assignLayerLetter}
+          />
+        </div>
+      )}
 
       {(missing.length > 0 || duplicates.size > 0) && (
         <div className="flex flex-wrap gap-3 text-sm">
@@ -179,13 +253,70 @@ export function LayoutEditor() {
           used={used}
           onAssign={assign}
           onToggleLock={toggleLock}
+          onOpenLayer={() => setLayerOpen(true)}
         />
-        <TypingTester layout={layout} onPress={setPressedId} />
+        <TypingTester
+          layout={layout}
+          layer={layer}
+          onPress={setPressedId}
+          layerOpen={layerOpen}
+          onLayerOpenChange={setLayerOpen}
+        />
       </div>
 
-      <ExportPanel layout={layout} />
+      <ExportPanel layout={layout} layer={layer} />
 
-      <PairTables />
+      <PairTables layer={layer} />
+    </div>
+  );
+}
+
+function LayerLetterEditor({
+  shortcut,
+  letter,
+  used,
+  onAssign,
+}: {
+  shortcut: string | null;
+  letter: string | null;
+  used: Set<string>;
+  onAssign: (letter: string) => void;
+}) {
+  if (!shortcut) {
+    return (
+      <div className="rounded-2xl border border-dashed border-[var(--line)] p-5 text-[var(--ink-muted)]">
+        Выберите слот на миниклавиатуре.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)]/80 p-5">
+      <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-[0.18em] text-[var(--ink-faint)]">
+        Слот Q → {shortcut}
+      </p>
+      <p className="mt-1 font-[family-name:var(--font-display)] text-3xl text-[var(--layer)]">
+        {letter ?? "—"}
+      </p>
+      <div className="mt-4 grid grid-cols-6 gap-1.5 sm:grid-cols-8">
+        {CYRILLIC_ALPHABET.filter((l) => {
+          // show unused + current
+          return !used.has(l) || l === letter;
+        }).map((l) => (
+          <button
+            key={l}
+            type="button"
+            onClick={() => onAssign(l)}
+            className={`flex h-9 items-center justify-center rounded-lg border font-[family-name:var(--font-display)] text-lg ${
+              l === letter
+                ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
+                : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)]"
+            }`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -206,7 +337,7 @@ function PairChip({
 }: {
   lat: string;
   cyr: string;
-  tone: "match" | "semi" | "sound" | "extra";
+  tone: "match" | "semi" | "sound" | "extra" | "layer";
 }) {
   const styles = {
     match:
@@ -216,6 +347,8 @@ function PairChip({
       "border-[var(--sound-line)] bg-[var(--sound-bg)] text-[var(--sound)]",
     extra:
       "border-[var(--extra-line)] bg-[var(--extra-bg)] text-[var(--extra)]",
+    layer:
+      "border-[var(--layer-line)] bg-[var(--layer-bg)] text-[var(--layer)]",
   }[tone];
 
   return (
@@ -229,16 +362,16 @@ function PairChip({
   );
 }
 
-function PairTables() {
+function PairTables({ layer }: { layer: LayerSlot[] }) {
   return (
-    <section id="pairs" className="scroll-mt-8 space-y-10 border-t border-[var(--line)] pt-8">
+    <section
+      id="pairs"
+      className="scroll-mt-8 space-y-10 border-t border-[var(--line)] pt-8"
+    >
       <div>
         <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
           Графические совпадения
         </h2>
-        <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
-          Буквы выглядят почти одинаково — стоят на одной физической клавише.
-        </p>
         <ul className="mt-5 flex flex-wrap gap-2">
           {Object.entries(HOMOGLYPHS).map(([lat, cyr]) => (
             <PairChip key={lat} lat={lat} cyr={cyr} tone="match" />
@@ -248,11 +381,8 @@ function PairTables() {
 
       <div>
         <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
-          Полусовпадения графические
+          Полусовпадения
         </h2>
-        <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
-          Силуэт похож, но не тождественен: Я на R, И на N.
-        </p>
         <ul className="mt-5 flex flex-wrap gap-2">
           {Object.entries(SEMI_HOMOGLYPHS).map(([lat, cyr]) => (
             <PairChip key={lat} lat={lat} cyr={cyr} tone="semi" />
@@ -262,11 +392,8 @@ function PairTables() {
 
       <div>
         <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
-          Совпадения звуковые
+          Звук
         </h2>
-        <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
-          Похожий звук — на той же клавише, что и в английской.
-        </p>
         <ul className="mt-5 flex flex-wrap gap-2">
           {Object.entries(PHONETICS).map(([lat, cyr]) => (
             <PairChip key={lat} lat={lat} cyr={cyr} tone="sound" />
@@ -276,14 +403,30 @@ function PairTables() {
 
       <div>
         <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
-          Дополнительные назначения
+          Дополнительно
         </h2>
-        <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
-          Зафиксированы в схеме: Й на I, Ч на S.
-        </p>
         <ul className="mt-5 flex flex-wrap gap-2">
           {Object.entries(EXTRA_ASSIGNMENTS).map(([lat, cyr]) => (
             <PairChip key={lat} lat={lat} cyr={cyr} tone="extra" />
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+          Миниклавиатура (Q)
+        </h2>
+        <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
+          Оставшиеся буквы: нажмите Q, затем цифру.
+        </p>
+        <ul className="mt-5 flex flex-wrap gap-2">
+          {layer.map((slot) => (
+            <PairChip
+              key={slot.shortcut}
+              lat={`Q${slot.shortcut}`}
+              cyr={slot.letter}
+              tone="layer"
+            />
           ))}
         </ul>
       </div>

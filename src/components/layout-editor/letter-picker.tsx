@@ -16,6 +16,7 @@ type Props = {
   used: Set<string>;
   onAssign: (letter: string | null) => void;
   onToggleLock: () => void;
+  onOpenLayer?: () => void;
 };
 
 const HINT: Record<string, { label: string; color: string }> = {
@@ -37,11 +38,34 @@ export function LetterPicker({
   used,
   onAssign,
   onToggleLock,
+  onOpenLayer,
 }: Props) {
   if (!selected || !mapping) {
     return (
       <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)]/50 p-6 text-[var(--ink-muted)]">
         Выберите клавишу на клавиатуре, чтобы назначить русскую букву.
+      </div>
+    );
+  }
+
+  if (mapping.kind === "layer") {
+    return (
+      <div className="rounded-2xl border border-[var(--layer-line)] bg-[var(--layer-bg)] p-5 backdrop-blur-sm">
+        <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-[0.18em] text-[var(--layer)]">
+          Клавиша {selected.latin} · портал
+        </p>
+        <p className="mt-2 font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+          Миниклавиатура
+        </p>
+        <p className="mt-2 text-sm text-[var(--ink-muted)]">
+          Q не печатает букву сама — открывает слой оставшихся: Б П Ш Щ Ц Ъ Ы Ь
+          Э Ё. В наборе: Q → цифра 1–0.
+        </p>
+        {onOpenLayer && (
+          <Button className="mt-4" size="sm" onClick={onOpenLayer}>
+            Показать минику
+          </Button>
+        )}
       </div>
     );
   }

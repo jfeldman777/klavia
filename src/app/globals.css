@@ -23,6 +23,9 @@
   --extra: #c9a0e8;
   --extra-bg: rgba(201, 160, 232, 0.12);
   --extra-line: rgba(201, 160, 232, 0.38);
+  --layer: #f2a27a;
+  --layer-bg: rgba(242, 162, 122, 0.14);
+  --layer-line: rgba(242, 162, 122, 0.42);
   --custom: #7eb6ff;
   --custom-bg: rgba(126, 182, 255, 0.1);
   --custom-line: rgba(126, 182, 255, 0.32);
