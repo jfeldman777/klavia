@@ -43,10 +43,10 @@ export default function Home() {
               Собрать раскладку
             </a>
             <a
-              href="#pairs"
+              href="#install"
               className="inline-flex h-11 items-center rounded-md border border-[var(--line)] bg-[var(--surface-2)] px-5 text-sm text-[var(--ink)] transition hover:bg-[var(--surface-3)]"
             >
-              Список совпадений
+              Установить на ПК
             </a>
           </div>
         </section>

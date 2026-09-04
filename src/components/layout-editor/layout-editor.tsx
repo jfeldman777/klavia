@@ -6,6 +6,7 @@ import { LetterPicker } from "./letter-picker";
 import { TypingTester } from "./typing-tester";
 import { ExportPanel } from "./export-panel";
 import { MiniKeyboard } from "./mini-keyboard";
+import { InstallPanel } from "./install-panel";
 import { Button } from "@/components/ui/button";
 import {
   ALL_KEYS,
@@ -263,6 +264,8 @@ export function LayoutEditor() {
           onLayerOpenChange={setLayerOpen}
         />
       </div>
+
+      <InstallPanel layout={layout} layer={layer} />
 
       <ExportPanel layout={layout} layer={layer} />
 

@@ -1,0 +1,68 @@
+===== FILE: symbols/klavia =====
+// Klavia / Совпад — Linux xkb
+partial alphanumeric_keys
+xkb_symbols "klavia" {
+    include "us(basic)"
+    name[Group1]= "Russian (Klavia)";
+
+    key <AD03> { [ U0435, U0415 ] };
+    key <AD04> { [ U044F, U042F ] };
+    key <AD05> { [ U0442, U0422 ] };
+    key <AD06> { [ U0443, U0423 ] };
+    key <AD07> { [ U044E, U042E ] };
+    key <AD08> { [ U0439, U0419 ] };
+    key <AD09> { [ U043E, U041E ] };
+    key <AD10> { [ U0440, U0420 ] };
+    key <AC01> { [ U0430, U0410 ] };
+    key <AC02> { [ U0447, U0427 ] };
+    key <AC03> { [ U0434, U0414 ] };
+    key <AC04> { [ U0444, U0424 ] };
+    key <AC05> { [ U0433, U0413 ] };
+    key <AC06> { [ U043D, U041D ] };
+    key <AC07> { [ U0436, U0416 ] };
+    key <AC08> { [ U043A, U041A ] };
+    key <AC09> { [ U043B, U041B ] };
+    key <AB01> { [ U0437, U0417 ] };
+    key <AB02> { [ U0445, U0425 ] };
+    key <AB03> { [ U0441, U0421 ] };
+    key <AB05> { [ U0432, U0412 ] };
+    key <AB06> { [ U0438, U0418 ] };
+    key <AB07> { [ U043C, U041C ] };
+
+    // Оставшиеся буквы на свободных клавишах (системный fallback;
+    // в браузере и AHK они через Q → цифра):
+    key <AD02> { [ U0448, U0428 ] };
+    key <AB04> { [ U0431, U0411 ] };
+    key <AB08> { [ U0446, U0426 ] };
+    key <AB09> { [ U044B, U042B ] };
+    key <AB10> { [ U0449, U0429 ] };
+    key <AD11> { [ U044A, U042A ] };
+    key <AD12> { [ U0451, U0401 ] };
+    key <AC10> { [ U044D, U042D ] };
+    key <AC11> { [ U044C, U042C ] };
+    // П: в AHK/веб — Q затем 2. На Linux добавьте вручную при необходимости.
+};
+
+===== FILE: install-klavia.sh =====
+#!/usr/bin/env bash
+# Установка Klavia в пользовательский xkb (без root)
+set -euo pipefail
+DIR="$HOME/.config/xkb"
+mkdir -p "$DIR/symbols" "$DIR/rules"
+cp "$(dirname "$0")/klavia" "$DIR/symbols/klavia"
+# Подключение: setxkbmap -I "$HOME/.config/xkb" -layout klavia -option
+# Или добавьте в ~/.config/xkb/rules/evdev пару layout.
+cat > "$DIR/README-klavia.txt" <<'EOF'
+Klavia установлена в ~/.config/xkb/symbols/klavia
+
+Включить (X11):
+  setxkbmap -I "$HOME/.config/xkb" -layout us,klavia -option grp:alt_shift_toggle
+
+Wayland (GNOME/KDE): импортируйте symbols через локальный xkb или используйте
+браузерную версию / AutoHotkey-аналог не нужен — см. веб-приложение Klavia.
+EOF
+echo "Готово: $DIR/symbols/klavia"
+
+===== NOTE =====
+Минислой Q→цифра полноценно работает в веб-приложении и Windows AHK.
+На Linux в системной раскладке оставшиеся буквы продублированы на свободных клавишах.
