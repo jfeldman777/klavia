@@ -23,10 +23,14 @@ export default function Home() {
             Совпад
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--ink-muted)] animate-rise-delay">
-            Русская раскладка, где графические совпадения с английским стоят на
-            той же клавише:{" "}
-            <span className="text-[var(--match)]">О←O · Р←P · В←B · М←M</span> и
-            другие. Несовпадающие буквы задаёте сами.
+            Графика на той же клавише:{" "}
+            <span className="text-[var(--match)]">О←O · Р←P · В←B · М←M</span>.
+            Полусовпадения:{" "}
+            <span className="text-[var(--semi)]">Я←R · И←N</span>. Звук:{" "}
+            <span className="text-[var(--sound)]">
+              Г←G · Д←D · Ж←J · З←Z · Л←L · Ю←U
+            </span>
+            . Остальное задаёте сами.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 animate-rise-delay-2">
             <a

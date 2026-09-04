@@ -10,9 +10,12 @@ import {
   ALL_KEYS,
   DEFAULT_LAYOUT,
   HOMOGLYPHS,
+  PHONETICS,
+  SEMI_HOMOGLYPHS,
   STORAGE_KEY,
   cloneLayout,
   duplicateLetters,
+  kindForLatinLetter,
   missingLetters,
   usedLetters,
   type KeyId,
@@ -62,12 +65,16 @@ export function LayoutEditor() {
     return set;
   }, [duplicates]);
 
-  const homoglyphCount = useMemo(
-    () =>
-      ALL_KEYS.filter((k) => layout[k.id]?.kind === "homoglyph" && layout[k.id]?.cyrillic)
-        .length,
-    [layout],
-  );
+  const counts = useMemo(() => {
+    const c = { homoglyph: 0, semi: 0, phonetic: 0, custom: 0 };
+    for (const key of ALL_KEYS) {
+      const kind = layout[key.id]?.kind;
+      if (kind === "homoglyph" || kind === "semi" || kind === "phonetic" || kind === "custom") {
+        if (layout[key.id]?.cyrillic) c[kind] += 1;
+      }
+    }
+    return c;
+  }, [layout]);
 
   const assign = useCallback(
     (letter: string | null) => {
@@ -76,19 +83,12 @@ export function LayoutEditor() {
         const current = prev[selectedId];
         if (current.locked) return prev;
         const latin = ALL_KEYS.find((k) => k.id === selectedId)?.latin ?? "";
-        const isHomo =
-          letter !== null &&
-          HOMOGLYPHS[latin]?.toUpperCase() === letter.toUpperCase();
         return {
           ...prev,
           [selectedId]: {
             ...current,
             cyrillic: letter ? letter.toUpperCase() : null,
-            kind: letter
-              ? isHomo
-                ? "homoglyph"
-                : "custom"
-              : "empty",
+            kind: letter ? kindForLatinLetter(latin, letter) : "empty",
           },
         };
       });
@@ -116,9 +116,22 @@ export function LayoutEditor() {
     <div className="flex w-full flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-3 text-sm">
-          <LegendDot color="var(--match)" label={`Совпадения · ${homoglyphCount}`} />
-          <LegendDot color="var(--custom)" label="Заданы отдельно" />
-          <LegendDot color="var(--ink-faint)" label="Пусто" />
+          <LegendDot
+            color="var(--match)"
+            label={`Графика · ${counts.homoglyph}`}
+          />
+          <LegendDot
+            color="var(--semi)"
+            label={`Полусовпад. · ${counts.semi}`}
+          />
+          <LegendDot
+            color="var(--sound)"
+            label={`Звук · ${counts.phonetic}`}
+          />
+          <LegendDot
+            color="var(--custom)"
+            label={`Отдельно · ${counts.custom}`}
+          />
         </div>
         <Button variant="secondary" size="sm" onClick={reset}>
           <RotateCcw className="h-3.5 w-3.5" /> Сбросить к Совпад
@@ -142,8 +155,7 @@ export function LayoutEditor() {
           )}
           {duplicates.size > 0 && (
             <p className="rounded-full border border-[var(--warn-line)] bg-[var(--warn-bg)] px-3 py-1 text-[var(--warn)]">
-              Дубли:{" "}
-              {[...duplicates.keys()].join(" ")}
+              Дубли: {[...duplicates.keys()].join(" ")}
             </p>
           )}
         </div>
@@ -162,7 +174,7 @@ export function LayoutEditor() {
 
       <ExportPanel layout={layout} />
 
-      <HomoglyphTable />
+      <PairTables />
     </div>
   );
 }
@@ -170,41 +182,84 @@ export function LayoutEditor() {
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-2 text-[var(--ink-muted)]">
-      <span
-        className="h-2.5 w-2.5 rounded-full"
-        style={{ background: color }}
-      />
+      <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
       {label}
     </span>
   );
 }
 
-function HomoglyphTable() {
-  const pairs = Object.entries(HOMOGLYPHS);
+function PairChip({
+  lat,
+  cyr,
+  tone,
+}: {
+  lat: string;
+  cyr: string;
+  tone: "match" | "semi" | "sound";
+}) {
+  const styles = {
+    match:
+      "border-[var(--match-line)] bg-[var(--match-bg)] text-[var(--match)]",
+    semi: "border-[var(--semi-line)] bg-[var(--semi-bg)] text-[var(--semi)]",
+    sound:
+      "border-[var(--sound-line)] bg-[var(--sound-bg)] text-[var(--sound)]",
+  }[tone];
+
   return (
-    <section id="pairs" className="scroll-mt-8 border-t border-[var(--line)] pt-8">
-      <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
-        Графические совпадения
-      </h2>
-      <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
-        Эти буквы выглядят почти одинаково в латинице и кириллице — поэтому они
-        стоят на одной физической клавише. Остальные (Б, Г, Д, Ж…) задаются
-        отдельно под ваш вкус.
-      </p>
-      <ul className="mt-5 flex flex-wrap gap-2">
-        {pairs.map(([lat, cyr]) => (
-          <li
-            key={lat}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--match-line)] bg-[var(--match-bg)] px-3 py-2 font-[family-name:var(--font-mono)] text-sm text-[var(--match)]"
-          >
-            <span className="text-[var(--ink-faint)]">{lat}</span>
-            <span aria-hidden>→</span>
-            <span className="font-[family-name:var(--font-display)] text-lg text-[var(--match)]">
-              {cyr}
-            </span>
-          </li>
-        ))}
-      </ul>
+    <li
+      className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 font-[family-name:var(--font-mono)] text-sm ${styles}`}
+    >
+      <span className="text-[var(--ink-faint)]">{lat}</span>
+      <span aria-hidden>→</span>
+      <span className="font-[family-name:var(--font-display)] text-lg">{cyr}</span>
+    </li>
+  );
+}
+
+function PairTables() {
+  return (
+    <section id="pairs" className="scroll-mt-8 space-y-10 border-t border-[var(--line)] pt-8">
+      <div>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+          Графические совпадения
+        </h2>
+        <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
+          Буквы выглядят почти одинаково — стоят на одной физической клавише.
+        </p>
+        <ul className="mt-5 flex flex-wrap gap-2">
+          {Object.entries(HOMOGLYPHS).map(([lat, cyr]) => (
+            <PairChip key={lat} lat={lat} cyr={cyr} tone="match" />
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+          Полусовпадения графические
+        </h2>
+        <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
+          Силуэт похож, но не тождественен: Я на R, И на N.
+        </p>
+        <ul className="mt-5 flex flex-wrap gap-2">
+          {Object.entries(SEMI_HOMOGLYPHS).map(([lat, cyr]) => (
+            <PairChip key={lat} lat={lat} cyr={cyr} tone="semi" />
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+          Совпадения звуковые
+        </h2>
+        <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
+          Похожий звук — на той же клавише, что и в английской.
+        </p>
+        <ul className="mt-5 flex flex-wrap gap-2">
+          {Object.entries(PHONETICS).map(([lat, cyr]) => (
+            <PairChip key={lat} lat={lat} cyr={cyr} tone="sound" />
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

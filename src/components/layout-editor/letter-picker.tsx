@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import {
   CYRILLIC_ALPHABET,
-  HOMOGLYPHS,
+  suggestedForLatin,
   type KeyMapping,
   type KeyMeta,
 } from "@/lib/layout-data";
@@ -16,6 +16,18 @@ type Props = {
   used: Set<string>;
   onAssign: (letter: string | null) => void;
   onToggleLock: () => void;
+};
+
+const HINT: Record<string, { label: string; color: string }> = {
+  homoglyph: {
+    label: "Графическое совпадение",
+    color: "text-[var(--match)]",
+  },
+  semi: {
+    label: "Полусовпадение графическое",
+    color: "text-[var(--semi)]",
+  },
+  phonetic: { label: "Звуковое совпадение", color: "text-[var(--sound)]" },
 };
 
 export function LetterPicker({
@@ -33,8 +45,8 @@ export function LetterPicker({
     );
   }
 
-  const isHomoglyphLatin = Boolean(HOMOGLYPHS[selected.latin]);
-  const suggested = HOMOGLYPHS[selected.latin];
+  const suggestion = suggestedForLatin(selected.latin);
+  const hint = suggestion ? HINT[suggestion.kind] : null;
 
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)]/80 p-5 backdrop-blur-sm">
@@ -49,14 +61,17 @@ export function LetterPicker({
               ← {selected.latin}
             </span>
           </p>
-          {isHomoglyphLatin && (
-            <p className="mt-2 text-sm text-[var(--match)]">
-              Графическое совпадение: {selected.latin} ≈ {suggested}
+          {suggestion && hint && (
+            <p className={cn("mt-2 text-sm", hint.color)}>
+              {hint.label}: {selected.latin} → {suggestion.letter}
             </p>
           )}
         </div>
         <div className="flex gap-2">
-          {mapping.kind === "homoglyph" || mapping.locked ? (
+          {mapping.locked ||
+          mapping.kind === "homoglyph" ||
+          mapping.kind === "semi" ||
+          mapping.kind === "phonetic" ? (
             <Button variant="secondary" size="sm" onClick={onToggleLock}>
               {mapping.locked ? (
                 <>
@@ -84,7 +99,7 @@ export function LetterPicker({
         {CYRILLIC_ALPHABET.map((letter) => {
           const taken = used.has(letter) && mapping.cyrillic !== letter;
           const active = mapping.cyrillic === letter;
-          const matchHint = suggested === letter;
+          const matchHint = suggestion?.letter === letter;
           return (
             <button
               key={letter}
@@ -97,7 +112,16 @@ export function LetterPicker({
                   "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]",
                 !active &&
                   matchHint &&
+                  suggestion?.kind === "homoglyph" &&
                   "border-[var(--match-line)] bg-[var(--match-bg)] text-[var(--match)]",
+                !active &&
+                  matchHint &&
+                  suggestion?.kind === "semi" &&
+                  "border-[var(--semi-line)] bg-[var(--semi-bg)] text-[var(--semi)]",
+                !active &&
+                  matchHint &&
+                  suggestion?.kind === "phonetic" &&
+                  "border-[var(--sound-line)] bg-[var(--sound-bg)] text-[var(--sound)]",
                 !active &&
                   !matchHint &&
                   "border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)] hover:border-[var(--ink-faint)]",

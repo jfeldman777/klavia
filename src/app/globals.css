@@ -14,6 +14,12 @@
   --match: #3ecf8e;
   --match-bg: rgba(62, 207, 142, 0.12);
   --match-line: rgba(62, 207, 142, 0.35);
+  --semi: #e6c35c;
+  --semi-bg: rgba(230, 195, 92, 0.12);
+  --semi-line: rgba(230, 195, 92, 0.38);
+  --sound: #6ec8d4;
+  --sound-bg: rgba(110, 200, 212, 0.12);
+  --sound-line: rgba(110, 200, 212, 0.38);
   --custom: #7eb6ff;
   --custom-bg: rgba(126, 182, 255, 0.1);
   --custom-line: rgba(126, 182, 255, 0.32);

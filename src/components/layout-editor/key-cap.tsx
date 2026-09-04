@@ -12,6 +12,40 @@ type Props = {
   onSelect: () => void;
 };
 
+const KIND_STYLES: Record<
+  string,
+  { border: string; bg: string; text: string; dot?: string }
+> = {
+  homoglyph: {
+    border: "border-[var(--match-line)]",
+    bg: "bg-[var(--match-bg)]",
+    text: "text-[var(--match)]",
+    dot: "bg-[var(--match)]",
+  },
+  semi: {
+    border: "border-[var(--semi-line)]",
+    bg: "bg-[var(--semi-bg)]",
+    text: "text-[var(--semi)]",
+    dot: "bg-[var(--semi)]",
+  },
+  phonetic: {
+    border: "border-[var(--sound-line)]",
+    bg: "bg-[var(--sound-bg)]",
+    text: "text-[var(--sound)]",
+    dot: "bg-[var(--sound)]",
+  },
+  custom: {
+    border: "border-[var(--custom-line)]",
+    bg: "bg-[var(--custom-bg)]",
+    text: "text-[var(--custom)]",
+  },
+  empty: {
+    border: "border-[var(--line)]",
+    bg: "bg-[var(--surface-2)]",
+    text: "text-[var(--ink-faint)]",
+  },
+};
+
 export function KeyCap({
   meta,
   mapping,
@@ -22,6 +56,7 @@ export function KeyCap({
 }: Props) {
   const kind = mapping.kind;
   const letter = mapping.cyrillic;
+  const styles = KIND_STYLES[kind] ?? KIND_STYLES.empty;
 
   return (
     <button
@@ -32,11 +67,10 @@ export function KeyCap({
       className={cn(
         "group relative flex h-[3.35rem] min-w-[2.85rem] flex-1 flex-col items-stretch justify-between rounded-[10px] border px-1.5 py-1 text-left transition-all duration-150",
         "shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
-        kind === "homoglyph" &&
-          "border-[var(--match-line)] bg-[var(--match-bg)]",
-        kind === "custom" && "border-[var(--custom-line)] bg-[var(--custom-bg)]",
-        kind === "empty" && "border-[var(--line)] bg-[var(--surface-2)]",
-        selected && "ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg)]",
+        styles.border,
+        styles.bg,
+        selected &&
+          "ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg)]",
         pressed && "translate-y-[1px] brightness-125",
         conflict && "outline outline-2 outline-[var(--warn)]",
         mapping.locked && "cursor-default",
@@ -48,15 +82,18 @@ export function KeyCap({
       <span
         className={cn(
           "font-[family-name:var(--font-display)] text-[1.35rem] leading-none tracking-tight",
-          kind === "homoglyph" && "text-[var(--match)]",
-          kind === "custom" && "text-[var(--custom)]",
-          kind === "empty" && "text-[var(--ink-faint)]",
+          styles.text,
         )}
       >
         {letter ?? "·"}
       </span>
-      {kind === "homoglyph" && (
-        <span className="pointer-events-none absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[var(--match)] opacity-80" />
+      {styles.dot && (
+        <span
+          className={cn(
+            "pointer-events-none absolute right-1 top-1 h-1.5 w-1.5 rounded-full opacity-80",
+            styles.dot,
+          )}
+        />
       )}
     </button>
   );

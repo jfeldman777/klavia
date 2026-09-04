@@ -1,4 +1,4 @@
-/** Физическая QWERTY-клавиша → русская буква (строчная). */
+/** Физическая QWERTY-клавиша → русская буква. */
 
 export type KeyId =
   | "KeyQ"
@@ -40,11 +40,15 @@ export type KeyMeta = {
   /** Латинская метка на клавише (как на английской раскладке). */
   latin: string;
   row: 0 | 1 | 2;
-  /** Ширина в единицах (1 = обычная). */
   width?: number;
 };
 
-export type MappingKind = "homoglyph" | "custom" | "empty";
+export type MappingKind =
+  | "homoglyph"
+  | "semi"
+  | "phonetic"
+  | "custom"
+  | "empty";
 
 export type KeyMapping = {
   cyrillic: string | null;
@@ -52,7 +56,7 @@ export type KeyMapping = {
   locked?: boolean;
 };
 
-/** Клавиши, где буква выглядит почти одинаково в латинице и кириллице. */
+/** Полные графические совпадения: буква выглядит почти одинаково. */
 export const HOMOGLYPHS: Record<string, string> = {
   A: "А",
   B: "В",
@@ -65,8 +69,23 @@ export const HOMOGLYPHS: Record<string, string> = {
   P: "Р",
   T: "Т",
   X: "Х",
-  /** У ≈ Y по силуэту — часто включают в «графические». */
   Y: "У",
+};
+
+/** Полусовпадения по силуэту (похожи, но не тождественны). */
+export const SEMI_HOMOGLYPHS: Record<string, string> = {
+  R: "Я",
+  N: "И",
+};
+
+/** Звуковые совпадения: похожий звук на той же клавише. */
+export const PHONETICS: Record<string, string> = {
+  G: "Г",
+  D: "Д",
+  J: "Ж",
+  Z: "З",
+  L: "Л",
+  U: "Ю",
 };
 
 export const CYRILLIC_ALPHABET = [
@@ -151,10 +170,13 @@ export const ALL_KEYS: KeyMeta[] = KEYBOARD_ROWS.flat();
 
 /**
  * Стартовая раскладка «Совпад»:
- * — графические совпадения на тех же клавишах, что и в EN;
- * — остальные — фонетически / удобно для руки.
+ * — графические совпадения;
+ * — полусовпадения (Я←R, И←N);
+ * — звуковые (Г←G, Д←D, Ж←J, З←Z, Л←L, Ю←U);
+ * — остальное задано отдельно.
  */
 export const DEFAULT_LAYOUT: Record<KeyId, KeyMapping> = {
+  // Графические
   KeyA: { cyrillic: "А", kind: "homoglyph", locked: true },
   KeyB: { cyrillic: "В", kind: "homoglyph", locked: true },
   KeyC: { cyrillic: "С", kind: "homoglyph", locked: true },
@@ -168,30 +190,59 @@ export const DEFAULT_LAYOUT: Record<KeyId, KeyMapping> = {
   KeyX: { cyrillic: "Х", kind: "homoglyph", locked: true },
   KeyY: { cyrillic: "У", kind: "homoglyph", locked: true },
 
-  KeyQ: { cyrillic: "Я", kind: "custom" },
+  // Полусовпадения
+  KeyR: { cyrillic: "Я", kind: "semi", locked: true },
+  KeyN: { cyrillic: "И", kind: "semi", locked: true },
+
+  // Звуковые
+  KeyG: { cyrillic: "Г", kind: "phonetic", locked: true },
+  KeyD: { cyrillic: "Д", kind: "phonetic", locked: true },
+  KeyJ: { cyrillic: "Ж", kind: "phonetic", locked: true },
+  KeyZ: { cyrillic: "З", kind: "phonetic", locked: true },
+  KeyL: { cyrillic: "Л", kind: "phonetic", locked: true },
+  KeyU: { cyrillic: "Ю", kind: "phonetic", locked: true },
+
+  // Остальные — отдельно
+  KeyQ: { cyrillic: "Й", kind: "custom" },
   KeyW: { cyrillic: "Ш", kind: "custom" },
-  KeyR: { cyrillic: "Ь", kind: "custom" },
-  KeyU: { cyrillic: "Ю", kind: "custom" },
-  KeyI: { cyrillic: "И", kind: "custom" },
+  KeyI: { cyrillic: "П", kind: "custom" },
   BracketLeft: { cyrillic: "Ъ", kind: "custom" },
   BracketRight: { cyrillic: "Ё", kind: "custom" },
   KeyS: { cyrillic: "Ы", kind: "custom" },
-  KeyD: { cyrillic: "Д", kind: "custom" },
   KeyF: { cyrillic: "Ф", kind: "custom" },
-  KeyG: { cyrillic: "Г", kind: "custom" },
-  KeyJ: { cyrillic: "Ж", kind: "custom" },
-  KeyL: { cyrillic: "Л", kind: "custom" },
   Semicolon: { cyrillic: "Э", kind: "custom" },
-  Quote: { cyrillic: "Й", kind: "custom" },
-  KeyZ: { cyrillic: "З", kind: "custom" },
+  Quote: { cyrillic: "Ь", kind: "custom" },
   KeyV: { cyrillic: "Б", kind: "custom" },
-  KeyN: { cyrillic: "П", kind: "custom" },
   Comma: { cyrillic: "Ц", kind: "custom" },
   Period: { cyrillic: "Ч", kind: "custom" },
   Slash: { cyrillic: "Щ", kind: "custom" },
 };
 
-export const STORAGE_KEY = "sovpad-layout-v1";
+/** Bump при смене дефолтной схемы, чтобы не тянуть старый localStorage. */
+export const STORAGE_KEY = "sovpad-layout-v2";
+
+export function kindForLatinLetter(
+  latin: string,
+  cyrillic: string,
+): MappingKind {
+  const upper = cyrillic.toUpperCase();
+  if (HOMOGLYPHS[latin]?.toUpperCase() === upper) return "homoglyph";
+  if (SEMI_HOMOGLYPHS[latin]?.toUpperCase() === upper) return "semi";
+  if (PHONETICS[latin]?.toUpperCase() === upper) return "phonetic";
+  return "custom";
+}
+
+export function suggestedForLatin(latin: string): {
+  letter: string;
+  kind: MappingKind;
+} | null {
+  if (HOMOGLYPHS[latin])
+    return { letter: HOMOGLYPHS[latin], kind: "homoglyph" };
+  if (SEMI_HOMOGLYPHS[latin])
+    return { letter: SEMI_HOMOGLYPHS[latin], kind: "semi" };
+  if (PHONETICS[latin]) return { letter: PHONETICS[latin], kind: "phonetic" };
+  return null;
+}
 
 export function cloneLayout(
   layout: Record<KeyId, KeyMapping> = DEFAULT_LAYOUT,
@@ -258,8 +309,8 @@ export function exportLayoutJson(layout: Record<KeyId, KeyMapping>): string {
     {
       name: "Совпад",
       description:
-        "Русская раскладка с графическими совпадениями на тех же клавишах, что и в английской.",
-      version: 1,
+        "Русская раскладка: графические совпадения, полусовпадения (Я←R, И←N) и звуковые (Г←G…).",
+      version: 2,
       rows,
     },
     null,
@@ -270,7 +321,7 @@ export function exportLayoutJson(layout: Record<KeyId, KeyMapping>): string {
 export function exportLinuxXkbHint(layout: Record<KeyId, KeyMapping>): string {
   const lines = [
     "// Фрагмент для xkb (symbols). Подставьте в свой файл раскладки.",
-    'partial alphanumeric_keys',
+    "partial alphanumeric_keys",
     'xkb_symbols "sovpad" {',
     '    name[Group1]= "Russian (Sovpad)";',
     "",
@@ -328,7 +379,6 @@ function xkbKeysym(id: KeyId): string {
 }
 
 function unicodeName(ch: string): string {
-  // xkb принимает UXXXX для кириллицы
   const code = ch.codePointAt(0);
   if (code === undefined) return "VoidSymbol";
   return `U${code.toString(16).toUpperCase().padStart(4, "0")}`;
