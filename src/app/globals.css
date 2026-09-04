@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0e1412;
+  --surface: #16201c;
+  --surface-2: #1c2a24;
+  --surface-3: #24352d;
+  --line: #2f4439;
+  --ink: #e8f0ea;
+  --ink-muted: #9fb3a6;
+  --ink-faint: #6a8073;
+  --accent: #d4a017;
+  --accent-fg: #1a1404;
+  --match: #3ecf8e;
+  --match-bg: rgba(62, 207, 142, 0.12);
+  --match-line: rgba(62, 207, 142, 0.35);
+  --custom: #7eb6ff;
+  --custom-bg: rgba(126, 182, 255, 0.1);
+  --custom-line: rgba(126, 182, 255, 0.32);
+  --warn: #f0a35a;
+  --warn-bg: rgba(240, 163, 90, 0.12);
+  --warn-line: rgba(240, 163, 90, 0.35);
+  --glow: radial-gradient(
+    1200px 600px at 12% -10%,
+    rgba(62, 207, 142, 0.16),
+    transparent 55%
+  ),
+    radial-gradient(
+      900px 500px at 88% 0%,
+      rgba(212, 160, 23, 0.14),
+      transparent 50%
+    ),
+    linear-gradient(165deg, #0e1412 0%, #121a17 45%, #0c1210 100%);
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--glow);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-body), Georgia, serif;
+}
+
+::selection {
+  background: rgba(212, 160, 23, 0.35);
+  color: var(--ink);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.animate-rise {
+  animation: rise 0.7s ease-out both;
+}
+
+.animate-rise-delay {
+  animation: rise 0.8s ease-out 0.12s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise 0.85s ease-out 0.22s both;
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(62, 207, 142, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(62, 207, 142, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black 30%, transparent 95%);
+}
