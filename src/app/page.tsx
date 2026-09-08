@@ -5,13 +5,19 @@ export default function Home() {
     <div className="relative flex flex-1 flex-col">
       <div className="hero-grid pointer-events-none absolute inset-x-0 top-0 h-[70vh]" />
 
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center px-5 pt-20 sm:px-8 sm:pt-24">
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-5 pt-6 sm:px-8">
         <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-[0.28em] text-[var(--ink-faint)]">
           раскладка · совпад
         </p>
+        <a
+          href="#editor"
+          className="text-sm text-[var(--accent)] underline-offset-4 hover:underline"
+        >
+          К пяти раскладкам
+        </a>
       </header>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pb-20 pt-8 sm:px-8">
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pb-20 pt-10 sm:px-8 sm:pt-14">
         <section className="mb-14 max-w-3xl animate-rise">
           <h1 className="font-[family-name:var(--font-display)] text-[clamp(2.6rem,8vw,4.6rem)] font-semibold leading-[0.95] tracking-tight text-[var(--ink)]">
             Совпад

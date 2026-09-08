@@ -297,7 +297,8 @@ export function TypingTester({
         autoCapitalize="off"
         onBeforeInput={(e) => {
           if (!rtl) return;
-          if (e.inputType.startsWith("insert") && e.data) e.preventDefault();
+          const ie = e.nativeEvent;
+          if (ie.inputType.startsWith("insert") && ie.data) e.preventDefault();
         }}
         className={`w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--bg)] px-4 py-3 font-[family-name:var(--font-hebrew)] text-lg leading-relaxed text-[var(--ink)] outline-none ring-[var(--accent)] placeholder:text-[var(--ink-faint)] focus:ring-2 ${
           rtl ? "klavia-rtl" : ""

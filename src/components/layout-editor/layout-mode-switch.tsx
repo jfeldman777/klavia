@@ -10,8 +10,12 @@ type Props = {
 
 export function LayoutModeSwitch({ value, onChange }: Props) {
   return (
-    <div className="fixed inset-x-0 top-0 z-50 border-b border-[var(--line)] bg-[var(--bg)]/95 px-3 py-2 backdrop-blur-md">
-      <div className="mx-auto grid max-w-6xl grid-cols-5 gap-1">
+    <div className="w-full">
+      <div
+        className="grid grid-cols-5 gap-1 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-1"
+        role="group"
+        aria-label="Раскладка"
+      >
         {INPUT_MODES.map((mode) => {
           const on = value === mode.id;
           return (
@@ -21,10 +25,10 @@ export function LayoutModeSwitch({ value, onChange }: Props) {
               title={mode.hint}
               onClick={() => onChange(mode.id)}
               className={cn(
-                "flex h-10 min-w-0 items-center justify-center rounded-lg px-1 text-center text-[10px] font-semibold leading-tight tracking-wide transition sm:h-11 sm:text-xs",
+                "flex h-11 min-w-0 items-center justify-center rounded-lg px-1 text-center text-[10px] font-semibold leading-tight tracking-wide transition sm:text-xs",
                 on
                   ? "bg-[var(--accent)] text-[var(--accent-fg)]"
-                  : "bg-[var(--surface-2)] text-[var(--ink)] hover:bg-[var(--surface-3)]",
+                  : "text-[var(--ink)] hover:bg-[var(--surface-3)]",
               )}
             >
               {mode.label}
@@ -32,6 +36,9 @@ export function LayoutModeSwitch({ value, onChange }: Props) {
           );
         })}
       </div>
+      <p className="mt-1.5 text-right text-[10px] text-[var(--ink-faint)]">
+        Pause — по кругу
+      </p>
     </div>
   );
 }
