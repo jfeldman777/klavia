@@ -247,6 +247,11 @@ export function LayoutEditor() {
               </button>
             ))}
           </div>
+          {script === "he" && (
+            <p className="text-xs text-[var(--ink-muted)]">
+              Справа налево · без стандартной раскладки Windows
+            </p>
+          )}
           <LegendDot
             color="var(--match)"
             label={`Графика · ${counts.homoglyph}`}

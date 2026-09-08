@@ -34,8 +34,10 @@ export default function Home() {
             <span className="text-[var(--extra)]">Й←I · Ч←S · Б←V</span>. Остальные —
             через{" "}
             <span className="text-[var(--layer)]">Q → миниклавиатуру</span>.
-            Иврит — на тех же клавишах; концевые:{" "}
+            Иврит — клавиа-ивр на тех же клавишах, справа налево; концевые:{" "}
             <span className="text-[var(--layer)]">J затем буква</span>.
+            На Windows Pause листает стандарт рус / англ / стандарт ивр /
+            клавиа-ру / клавиа-ивр.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 animate-rise-delay-2">
             <a

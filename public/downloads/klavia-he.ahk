@@ -4,19 +4,48 @@
 ; 3) Переключение: Pause — вкл/выкл
 ; Клавиши — физические QWERTY (сканкоды).
 ; J затем K M N F C — концевые ך ם ן ף ץ
+; Письмо справа налево. Стандартный иврит Windows не подключается.
 #Requires AutoHotkey v2.0
 #SingleInstance Force
+#UseHook True
 SendMode "Input"
 
 global KlaviaOn := true
 global KlaviaLayer := false
 
-TrayTip "Klavia", "Иврит включён. Pause — вкл/выкл. J — концевые."
+ForceEng() {
+    en := DllCall("LoadKeyboardLayout", "Str", "00000409", "UInt", 1, "ptr")
+    if hwnd := WinExist("A")
+        PostMessage 0x50, 0, en, hwnd  ; не стандартный иврит Windows
+}
+
+EnsureRtl() {
+    hCtrl := 0
+    try hCtrl := ControlGetHwnd(ControlGetFocus("A"), "A")
+    if !hCtrl
+        return
+    getFn := A_PtrSize = 8 ? "GetWindowLongPtrW" : "GetWindowLongW"
+    setFn := A_PtrSize = 8 ? "SetWindowLongPtrW" : "SetWindowLongW"
+    ex := DllCall(getFn, "ptr", hCtrl, "int", -20, "ptr")
+    ; WS_EX_RIGHT | WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR
+    DllCall(setFn, "ptr", hCtrl, "int", -20, "ptr", ex | 0x7000, "ptr")
+    try SendMessage(0x04C8, 2, 2, hCtrl)  ; EM_SETBIDIOPTIONS, BOE_RTLREADING
+}
+
+SendHe(ch) {
+    EnsureRtl()
+    SendText ch
+}
+
+ForceEng()
+TrayTip "Klavia", "Иврит справа налево. Pause — вкл/выкл."
 
 Pause:: {
     global KlaviaOn, KlaviaLayer
     KlaviaOn := !KlaviaOn
     KlaviaLayer := false
+    if KlaviaOn
+        ForceEng()
     TrayTip "Klavia", KlaviaOn ? "Включено" : "Выключено"
 }
 
@@ -43,108 +72,108 @@ SC024:: {  ; J — слой концевых
 #HotIf KlaviaOn && KlaviaLayer
 SC025:: {  ; K → ך
     global KlaviaLayer
-    SendText "ך"
+    SendHe("ך")
     KlaviaLayer := false
 }
 +SC025:: {
     global KlaviaLayer
-    SendText "ך"
+    SendHe("ך")
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
 SC032:: {  ; M → ם
     global KlaviaLayer
-    SendText "ם"
+    SendHe("ם")
     KlaviaLayer := false
 }
 +SC032:: {
     global KlaviaLayer
-    SendText "ם"
+    SendHe("ם")
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
 SC031:: {  ; N → ן
     global KlaviaLayer
-    SendText "ן"
+    SendHe("ן")
     KlaviaLayer := false
 }
 +SC031:: {
     global KlaviaLayer
-    SendText "ן"
+    SendHe("ן")
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
 SC021:: {  ; F → ף
     global KlaviaLayer
-    SendText "ף"
+    SendHe("ף")
     KlaviaLayer := false
 }
 +SC021:: {
     global KlaviaLayer
-    SendText "ף"
+    SendHe("ף")
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
 SC02E:: {  ; C → ץ
     global KlaviaLayer
-    SendText "ץ"
+    SendHe("ץ")
     KlaviaLayer := false
 }
 +SC02E:: {
     global KlaviaLayer
-    SendText "ץ"
+    SendHe("ץ")
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && !KlaviaLayer
 
-SC010::SendText "ק"  ; Q коф
-+SC010::SendText "ק"
-SC011::SendText "ו"  ; W вав
-+SC011::SendText "ו"
-SC012::SendText "ה"  ; E хей
-+SC012::SendText "ה"
-SC014::SendText "ט"  ; T тет
-+SC014::SendText "ט"
-SC015::SendText "ע"  ; Y айн
-+SC015::SendText "ע"
-SC017::SendText "י"  ; I йуд
-+SC017::SendText "י"
-SC018::SendText "ס"  ; O самех
-+SC018::SendText "ס"
-SC019::SendText "ר"  ; P реш
-+SC019::SendText "ר"
-SC01E::SendText "א"  ; A алеф
-+SC01E::SendText "א"
-SC01F::SendText "ש"  ; S шин/син
-+SC01F::SendText "ש"
-SC020::SendText "ד"  ; D далет
-+SC020::SendText "ד"
-SC021::SendText "פ"  ; F фей
-+SC021::SendText "פ"
-SC022::SendText "ג"  ; G гимел
-+SC022::SendText "ג"
-SC025::SendText "כ"  ; K каф
-+SC025::SendText "כ"
-SC026::SendText "ל"  ; L ламед
-+SC026::SendText "ל"
-SC02C::SendText "ז"  ; Z зайн
-+SC02C::SendText "ז"
-SC02D::SendText "ח"  ; X хет
-+SC02D::SendText "ח"
-SC02E::SendText "צ"  ; C цади
-+SC02E::SendText "צ"
-SC02F::SendText "ת"  ; V тав
-+SC02F::SendText "ת"
-SC030::SendText "ב"  ; B бет
-+SC030::SendText "ב"
-SC031::SendText "נ"  ; N нун
-+SC031::SendText "נ"
-SC032::SendText "מ"  ; M мем
-+SC032::SendText "מ"
+SC010::SendHe("ק")  ; Q коф
++SC010::SendHe("ק")
+SC011::SendHe("ו")  ; W вав
++SC011::SendHe("ו")
+SC012::SendHe("ה")  ; E хей
++SC012::SendHe("ה")
+SC014::SendHe("ט")  ; T тет
++SC014::SendHe("ט")
+SC015::SendHe("ע")  ; Y айн
++SC015::SendHe("ע")
+SC017::SendHe("י")  ; I йуд
++SC017::SendHe("י")
+SC018::SendHe("ס")  ; O самех
++SC018::SendHe("ס")
+SC019::SendHe("ר")  ; P реш
++SC019::SendHe("ר")
+SC01E::SendHe("א")  ; A алеф
++SC01E::SendHe("א")
+SC01F::SendHe("ש")  ; S шин/син
++SC01F::SendHe("ש")
+SC020::SendHe("ד")  ; D далет
++SC020::SendHe("ד")
+SC021::SendHe("פ")  ; F фей
++SC021::SendHe("פ")
+SC022::SendHe("ג")  ; G гимел
++SC022::SendHe("ג")
+SC025::SendHe("כ")  ; K каф
++SC025::SendHe("כ")
+SC026::SendHe("ל")  ; L ламед
++SC026::SendHe("ל")
+SC02C::SendHe("ז")  ; Z зайн
++SC02C::SendHe("ז")
+SC02D::SendHe("ח")  ; X хет
++SC02D::SendHe("ח")
+SC02E::SendHe("צ")  ; C цади
++SC02E::SendHe("צ")
+SC02F::SendHe("ת")  ; V тав
++SC02F::SendHe("ת")
+SC030::SendHe("ב")  ; B бет
++SC030::SendHe("ב")
+SC031::SendHe("נ")  ; N нун
++SC031::SendHe("נ")
+SC032::SendHe("מ")  ; M мем
++SC032::SendHe("מ")
 
 #HotIf

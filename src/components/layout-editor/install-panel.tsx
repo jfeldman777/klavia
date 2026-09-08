@@ -14,8 +14,13 @@ type Props = {
   layer: LayerSlot[];
 };
 
-function downloadBundle(bundle: DownloadBundle) {
-  const blob = new Blob([bundle.content], { type: bundle.mime });
+async function downloadBundle(bundle: DownloadBundle) {
+  let content = bundle.content;
+  if (!content) {
+    const res = await fetch(`downloads/${bundle.filename}`);
+    content = await res.text();
+  }
+  const blob = new Blob([content], { type: bundle.mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -43,9 +48,9 @@ export function InstallPanel({ layout, layer }: Props) {
           Как пользоваться Klavia / Совпад
         </h2>
           <p className="mt-2 max-w-2xl text-sm text-[var(--ink-muted)]">
-            Три способа: веб (сразу), Windows AHK (во всех программах), файлы
-            раскладки для macOS / Linux. Переключатель Совпад / Иврит — над
-            клавиатурой; скачивается активная раскладка.
+            На Windows один файл <span className="font-[family-name:var(--font-mono)]">klavia.ahk</span>:
+            клавиша Pause листает пять режимов — стандарт рус, англ, стандарт
+            ивр, клавиа-ру, клавиа-ивр. В браузере — кнопки Совпад / Иврит.
           </p>
       </div>
 
@@ -56,8 +61,9 @@ export function InstallPanel({ layout, layer }: Props) {
             <span className="font-medium">Веб — любой ПК и ОС</span>
           </div>
           <p className="text-sm text-[var(--ink-muted)]">
-            Откройте сайт Klavia в браузере, печатайте в поле проверки. Русский:
-            Q → цифра. Иврит: J → буква концевой формы. Работает без установки.
+            Откройте сайт, печатайте в поле проверки. Кнопки Совпад / Иврит —
+            это клавиа-ру и клавиа-ивр. Стандартные рус / англ / ивр — в
+            Windows через Pause в klavia.ahk.
           </p>
           <a
             href="#editor"
@@ -72,8 +78,9 @@ export function InstallPanel({ layout, layer }: Props) {
             <span className="font-medium">Система — во всех приложениях</span>
           </div>
           <p className="text-sm text-[var(--ink-muted)]">
-            Скачайте файл под вашу ОС ниже. На Windows удобнее всего AutoHotkey:
-            один файл, Pause включает/выключает.
+            Скачайте файл под вашу ОС ниже. На Windows: один{" "}
+            <span className="font-[family-name:var(--font-mono)]">klavia.ahk</span>,
+            Pause — следующее из пяти. Иконка в трее — выбрать сразу.
           </p>
         </div>
       </div>

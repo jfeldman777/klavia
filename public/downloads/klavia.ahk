@@ -1,24 +1,90 @@
-﻿; Klavia / Совпад — портативная раскладка для Windows (AutoHotkey v2)
-; 1) Установите AutoHotkey v2: https://www.autohotkey.com/
-; 2) Запустите этот файл — раскладка активна в любом приложении
-; 3) Переключение: Pause — вкл/выкл
-; Клавиши — физические QWERTY (сканкоды), работают поверх русской раскладки.
-; V → Б. Q затем 2–0 — П Ш Щ Ц Ъ Ы Ь Э Ё
+﻿; Klavia — переключение раскладок (AutoHotkey v2)
+; Pause — следующий режим:
+;   стандарт рус → англ → стандарт ивр → клавиа-ру → клавиа-ивр → …
+; Правый клик по иконке в трее — выбрать режим сразу.
+; клавиа-ру: Совпад. Q затем 2–0 — П Ш Щ Ц Ъ Ы Ь Э Ё. V → Б
+; клавиа-ивр: ваша карта, справа налево. J затем K M N F C — концевые
 #Requires AutoHotkey v2.0
 #SingleInstance Force
+#UseHook True
 SendMode "Input"
 
-global KlaviaOn := true
+global KlaviaMode := "std-ru"
 global KlaviaLayer := false
 
-TrayTip "Klavia", "Раскладка включена. Pause — вкл/выкл."
-
-Pause:: {
-    global KlaviaOn, KlaviaLayer
-    KlaviaOn := !KlaviaOn
-    KlaviaLayer := false
-    TrayTip "Klavia", KlaviaOn ? "Включено" : "Выключено"
+SetOsLayout(id) {
+    h := DllCall("LoadKeyboardLayout", "Str", id, "UInt", 1, "ptr")
+    if hwnd := WinExist("A")
+        PostMessage 0x50, 0, h, hwnd
 }
+
+EnsureRtl() {
+    hCtrl := 0
+    try hCtrl := ControlGetHwnd(ControlGetFocus("A"), "A")
+    if !hCtrl
+        return
+    getFn := A_PtrSize = 8 ? "GetWindowLongPtrW" : "GetWindowLongW"
+    setFn := A_PtrSize = 8 ? "SetWindowLongPtrW" : "SetWindowLongW"
+    ex := DllCall(getFn, "ptr", hCtrl, "int", -20, "ptr")
+    DllCall(setFn, "ptr", hCtrl, "int", -20, "ptr", ex | 0x7000, "ptr")
+    try SendMessage(0x04C8, 2, 2, hCtrl)
+}
+
+SendHe(ch) {
+    EnsureRtl()
+    SendText ch
+}
+
+ModeTitle(mode) {
+    names := Map(
+        "std-ru", "стандарт рус",
+        "std-en", "англ",
+        "std-he", "стандарт ивр",
+        "k-ru", "клавиа-ру",
+        "k-he", "клавиа-ивр"
+    )
+    return names.Has(mode) ? names[mode] : mode
+}
+
+ApplyMode(mode) {
+    global KlaviaMode, KlaviaLayer
+    KlaviaMode := mode
+    KlaviaLayer := false
+    switch mode {
+        case "std-ru": SetOsLayout("00000419")
+        case "std-en": SetOsLayout("00000409")
+        case "std-he": SetOsLayout("0000040D")
+        case "k-ru": SetOsLayout("00000409")
+        case "k-he": SetOsLayout("00000409")
+    }
+    TrayTip "Klavia", ModeTitle(mode)
+}
+
+NextMode() {
+    global KlaviaMode
+    modes := ["std-ru", "std-en", "std-he", "k-ru", "k-he"]
+    i := 1
+    for m in modes {
+        if (m = KlaviaMode) {
+            n := i = modes.Length ? 1 : i + 1
+            ApplyMode(modes[n])
+            return
+        }
+        i += 1
+    }
+    ApplyMode("std-ru")
+}
+
+A_TrayMenu.Delete()
+A_TrayMenu.Add("стандарт рус", (*) => ApplyMode("std-ru"))
+A_TrayMenu.Add("англ", (*) => ApplyMode("std-en"))
+A_TrayMenu.Add("стандарт ивр", (*) => ApplyMode("std-he"))
+A_TrayMenu.Add("клавиа-ру", (*) => ApplyMode("k-ru"))
+A_TrayMenu.Add("клавиа-ивр", (*) => ApplyMode("k-he"))
+A_TrayMenu.Add()
+A_TrayMenu.Add("Выход", (*) => ExitApp())
+
+Pause:: NextMode()
 
 Esc:: {
     global KlaviaLayer
@@ -29,8 +95,10 @@ Esc:: {
     Send "{Esc}"
 }
 
-#HotIf KlaviaOn
+ApplyMode("std-ru")
 
+; ===== клавиа-ру =====
+#HotIf KlaviaMode = "k-ru"
 SC010:: {  ; Q
     global KlaviaLayer
     KlaviaLayer := true
@@ -40,8 +108,8 @@ SC010:: {  ; Q
     KlaviaLayer := true
 }
 
-#HotIf KlaviaOn && KlaviaLayer
-SC003:: {  ; 2 → П
+#HotIf KlaviaMode = "k-ru" && KlaviaLayer
+SC003:: {
     global KlaviaLayer
     SendText "п"
     KlaviaLayer := false
@@ -51,9 +119,7 @@ SC003:: {  ; 2 → П
     SendText "П"
     KlaviaLayer := false
 }
-
-#HotIf KlaviaOn && KlaviaLayer
-SC004:: {  ; 3 → Ш
+SC004:: {
     global KlaviaLayer
     SendText "ш"
     KlaviaLayer := false
@@ -63,9 +129,7 @@ SC004:: {  ; 3 → Ш
     SendText "Ш"
     KlaviaLayer := false
 }
-
-#HotIf KlaviaOn && KlaviaLayer
-SC005:: {  ; 4 → Щ
+SC005:: {
     global KlaviaLayer
     SendText "щ"
     KlaviaLayer := false
@@ -75,9 +139,7 @@ SC005:: {  ; 4 → Щ
     SendText "Щ"
     KlaviaLayer := false
 }
-
-#HotIf KlaviaOn && KlaviaLayer
-SC006:: {  ; 5 → Ц
+SC006:: {
     global KlaviaLayer
     SendText "ц"
     KlaviaLayer := false
@@ -87,9 +149,7 @@ SC006:: {  ; 5 → Ц
     SendText "Ц"
     KlaviaLayer := false
 }
-
-#HotIf KlaviaOn && KlaviaLayer
-SC007:: {  ; 6 → Ъ
+SC007:: {
     global KlaviaLayer
     SendText "ъ"
     KlaviaLayer := false
@@ -99,9 +159,7 @@ SC007:: {  ; 6 → Ъ
     SendText "Ъ"
     KlaviaLayer := false
 }
-
-#HotIf KlaviaOn && KlaviaLayer
-SC008:: {  ; 7 → Ы
+SC008:: {
     global KlaviaLayer
     SendText "ы"
     KlaviaLayer := false
@@ -111,9 +169,7 @@ SC008:: {  ; 7 → Ы
     SendText "Ы"
     KlaviaLayer := false
 }
-
-#HotIf KlaviaOn && KlaviaLayer
-SC009:: {  ; 8 → Ь
+SC009:: {
     global KlaviaLayer
     SendText "ь"
     KlaviaLayer := false
@@ -123,9 +179,7 @@ SC009:: {  ; 8 → Ь
     SendText "Ь"
     KlaviaLayer := false
 }
-
-#HotIf KlaviaOn && KlaviaLayer
-SC00A:: {  ; 9 → Э
+SC00A:: {
     global KlaviaLayer
     SendText "э"
     KlaviaLayer := false
@@ -135,9 +189,7 @@ SC00A:: {  ; 9 → Э
     SendText "Э"
     KlaviaLayer := false
 }
-
-#HotIf KlaviaOn && KlaviaLayer
-SC00B:: {  ; 0 → Ё
+SC00B:: {
     global KlaviaLayer
     SendText "ё"
     KlaviaLayer := false
@@ -148,55 +200,163 @@ SC00B:: {  ; 0 → Ё
     KlaviaLayer := false
 }
 
-#HotIf KlaviaOn && !KlaviaLayer
-
-SC012::SendText "е"  ; E
+#HotIf KlaviaMode = "k-ru" && !KlaviaLayer
+SC012::SendText "е"
 +SC012::SendText "Е"
-SC013::SendText "я"  ; R
+SC013::SendText "я"
 +SC013::SendText "Я"
-SC014::SendText "т"  ; T
+SC014::SendText "т"
 +SC014::SendText "Т"
-SC015::SendText "у"  ; Y
+SC015::SendText "у"
 +SC015::SendText "У"
-SC016::SendText "ю"  ; U
+SC016::SendText "ю"
 +SC016::SendText "Ю"
-SC017::SendText "й"  ; I
+SC017::SendText "й"
 +SC017::SendText "Й"
-SC018::SendText "о"  ; O
+SC018::SendText "о"
 +SC018::SendText "О"
-SC019::SendText "р"  ; P
+SC019::SendText "р"
 +SC019::SendText "Р"
-SC01E::SendText "а"  ; A
+SC01E::SendText "а"
 +SC01E::SendText "А"
-SC01F::SendText "ч"  ; S
+SC01F::SendText "ч"
 +SC01F::SendText "Ч"
-SC020::SendText "д"  ; D
+SC020::SendText "д"
 +SC020::SendText "Д"
-SC021::SendText "ф"  ; F
+SC021::SendText "ф"
 +SC021::SendText "Ф"
-SC022::SendText "г"  ; G
+SC022::SendText "г"
 +SC022::SendText "Г"
-SC023::SendText "н"  ; H
+SC023::SendText "н"
 +SC023::SendText "Н"
-SC024::SendText "ж"  ; J
+SC024::SendText "ж"
 +SC024::SendText "Ж"
-SC025::SendText "к"  ; K
+SC025::SendText "к"
 +SC025::SendText "К"
-SC026::SendText "л"  ; L
+SC026::SendText "л"
 +SC026::SendText "Л"
-SC02C::SendText "з"  ; Z
+SC02C::SendText "з"
 +SC02C::SendText "З"
-SC02D::SendText "х"  ; X
+SC02D::SendText "х"
 +SC02D::SendText "Х"
-SC02E::SendText "с"  ; C
+SC02E::SendText "с"
 +SC02E::SendText "С"
-SC02F::SendText "б"  ; V → Б
+SC02F::SendText "б"
 +SC02F::SendText "Б"
-SC030::SendText "в"  ; B → В
+SC030::SendText "в"
 +SC030::SendText "В"
-SC031::SendText "и"  ; N
+SC031::SendText "и"
 +SC031::SendText "И"
-SC032::SendText "м"  ; M
+SC032::SendText "м"
 +SC032::SendText "М"
+
+; ===== клавиа-ивр =====
+#HotIf KlaviaMode = "k-he"
+SC024:: {  ; J — концевые
+    global KlaviaLayer
+    KlaviaLayer := true
+}
++SC024:: {
+    global KlaviaLayer
+    KlaviaLayer := true
+}
+
+#HotIf KlaviaMode = "k-he" && KlaviaLayer
+SC025:: {
+    global KlaviaLayer
+    SendHe("ך")
+    KlaviaLayer := false
+}
++SC025:: {
+    global KlaviaLayer
+    SendHe("ך")
+    KlaviaLayer := false
+}
+SC032:: {
+    global KlaviaLayer
+    SendHe("ם")
+    KlaviaLayer := false
+}
++SC032:: {
+    global KlaviaLayer
+    SendHe("ם")
+    KlaviaLayer := false
+}
+SC031:: {
+    global KlaviaLayer
+    SendHe("ן")
+    KlaviaLayer := false
+}
++SC031:: {
+    global KlaviaLayer
+    SendHe("ן")
+    KlaviaLayer := false
+}
+SC021:: {
+    global KlaviaLayer
+    SendHe("ף")
+    KlaviaLayer := false
+}
++SC021:: {
+    global KlaviaLayer
+    SendHe("ף")
+    KlaviaLayer := false
+}
+SC02E:: {
+    global KlaviaLayer
+    SendHe("ץ")
+    KlaviaLayer := false
+}
++SC02E:: {
+    global KlaviaLayer
+    SendHe("ץ")
+    KlaviaLayer := false
+}
+
+#HotIf KlaviaMode = "k-he" && !KlaviaLayer
+SC010::SendHe("ק")
++SC010::SendHe("ק")
+SC011::SendHe("ו")
++SC011::SendHe("ו")
+SC012::SendHe("ה")
++SC012::SendHe("ה")
+SC014::SendHe("ט")
++SC014::SendHe("ט")
+SC015::SendHe("ע")
++SC015::SendHe("ע")
+SC017::SendHe("י")
++SC017::SendHe("י")
+SC018::SendHe("ס")
++SC018::SendHe("ס")
+SC019::SendHe("ר")
++SC019::SendHe("ר")
+SC01E::SendHe("א")
++SC01E::SendHe("א")
+SC01F::SendHe("ש")
++SC01F::SendHe("ש")
+SC020::SendHe("ד")
++SC020::SendHe("ד")
+SC021::SendHe("פ")
++SC021::SendHe("פ")
+SC022::SendHe("ג")
++SC022::SendHe("ג")
+SC025::SendHe("כ")
++SC025::SendHe("כ")
+SC026::SendHe("ל")
++SC026::SendHe("ל")
+SC02C::SendHe("ז")
++SC02C::SendHe("ז")
+SC02D::SendHe("ח")
++SC02D::SendHe("ח")
+SC02E::SendHe("צ")
++SC02E::SendHe("צ")
+SC02F::SendHe("ת")
++SC02F::SendHe("ת")
+SC030::SendHe("ב")
++SC030::SendHe("ב")
+SC031::SendHe("נ")
++SC031::SendHe("נ")
+SC032::SendHe("מ")
++SC032::SendHe("מ")
 
 #HotIf

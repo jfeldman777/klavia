@@ -33,26 +33,71 @@ export function exportWindowsAhk(
   const layerHelp = hebrew
     ? `${layerLatin} затем K M N F C — концевые ך ם ן ף ץ`
     : `${layerLatin} затем 2–0 — миниклавиатура оставшихся букв (Б на V)`;
+  const emitSend = (ch: string) =>
+    hebrew ? `SendHe("${escapeAhk(ch)}")` : `SendText "${escapeAhk(ch)}"`;
 
   const lines = [
     `; ${title} — портативная раскладка для Windows (AutoHotkey v2)`,
     "; 1) Установите AutoHotkey v2: https://www.autohotkey.com/",
     "; 2) Запустите этот файл — раскладка активна в любом приложении",
-    "; 3) Переключение: Pause (или правый Ctrl+Space) — вкл/выкл",
+    "; 3) Переключение: Pause — вкл/выкл",
     `; ${layerHelp}`,
+    ...(hebrew
+      ? [
+          "; Письмо справа налево. Стандартный иврит Windows не подключается.",
+        ]
+      : []),
     "#Requires AutoHotkey v2.0",
     "#SingleInstance Force",
+    "#UseHook True",
     "SendMode \"Input\"",
     "",
     "global KlaviaOn := true",
     "global KlaviaLayer := false",
     "",
-    `TrayTip "Klavia", "Раскладка включена. Pause — вкл/выкл."`,
+    ...(hebrew
+      ? [
+          "ForceEng() {",
+          "    en := DllCall(\"LoadKeyboardLayout\", \"Str\", \"00000409\", \"UInt\", 1, \"ptr\")",
+          "    if hwnd := WinExist(\"A\")",
+          "        PostMessage 0x50, 0, en, hwnd  ; не стандартный иврит Windows",
+          "}",
+          "",
+          "EnsureRtl() {",
+          "    hCtrl := 0",
+          "    try hCtrl := ControlGetHwnd(ControlGetFocus(\"A\"), \"A\")",
+          "    if !hCtrl",
+          "        return",
+          "    getFn := A_PtrSize = 8 ? \"GetWindowLongPtrW\" : \"GetWindowLongW\"",
+          "    setFn := A_PtrSize = 8 ? \"SetWindowLongPtrW\" : \"SetWindowLongW\"",
+          "    ex := DllCall(getFn, \"ptr\", hCtrl, \"int\", -20, \"ptr\")",
+          "    ; WS_EX_RIGHT | WS_EX_RTLREADING | WS_EX_LEFTSCROLLBAR",
+          "    DllCall(setFn, \"ptr\", hCtrl, \"int\", -20, \"ptr\", ex | 0x7000, \"ptr\")",
+          "    try SendMessage(0x04C8, 2, 2, hCtrl)  ; EM_SETBIDIOPTIONS, BOE_RTLREADING",
+          "}",
+          "",
+          "SendHe(ch) {",
+          "    EnsureRtl()",
+          "    SendText ch",
+          "}",
+          "",
+          "ForceEng()",
+          `TrayTip "Klavia", "Иврит справа налево. Pause — вкл/выкл."`,
+        ]
+      : [
+          `TrayTip "Klavia", "Раскладка включена. Pause — вкл/выкл."`,
+        ]),
     "",
     "Pause:: {",
     "    global KlaviaOn, KlaviaLayer",
     "    KlaviaOn := !KlaviaOn",
     "    KlaviaLayer := false",
+    ...(hebrew
+      ? [
+          "    if KlaviaOn",
+          "        ForceEng()",
+        ]
+      : []),
     `    TrayTip "Klavia", KlaviaOn ? "Включено" : "Выключено"`,
     "}",
     "",
@@ -94,12 +139,12 @@ export function exportWindowsAhk(
       `#HotIf KlaviaOn && KlaviaLayer`,
       `${sc}:: {`,
       `    global KlaviaLayer`,
-      `    SendText "${escapeAhk(L)}"`,
+      `    ${emitSend(L)}`,
       `    KlaviaLayer := false`,
       `}`,
       `+${sc}:: {`,
       `    global KlaviaLayer`,
-      `    SendText "${escapeAhk(U)}"`,
+      `    ${emitSend(U)}`,
       `    KlaviaLayer := false`,
       `}`,
       "",
@@ -120,12 +165,12 @@ export function exportWindowsAhk(
       `#HotIf KlaviaOn && KlaviaLayer`,
       `${sc}:: {`,
       `    global KlaviaLayer`,
-      `    SendText "${escapeAhk(L)}"`,
+      `    ${emitSend(L)}`,
       `    KlaviaLayer := false`,
       `}`,
       `+${sc}:: {`,
       `    global KlaviaLayer`,
-      `    SendText "${escapeAhk(U)}"`,
+      `    ${emitSend(U)}`,
       `    KlaviaLayer := false`,
       `}`,
       "",
@@ -142,8 +187,8 @@ export function exportWindowsAhk(
     if (!ahkKey) continue;
     const L = typedChar(letter, false);
     const U = typedChar(letter, true);
-    lines.push(`${ahkKey}::SendText "${escapeAhk(L)}"`);
-    lines.push(`+${ahkKey}::SendText "${escapeAhk(U)}"`);
+    lines.push(`${ahkKey}::${emitSend(L)}`);
+    lines.push(`+${ahkKey}::${emitSend(U)}`);
   }
 
   lines.push("", "#HotIf", "");
@@ -492,13 +537,11 @@ export function buildDownloadBundles(
   const hebrew = layoutIsHebrew(layout);
   return [
     {
-      filename: hebrew ? "klavia-he.ahk" : "klavia.ahk",
+      filename: "klavia.ahk",
       mime: "text/plain;charset=utf-8",
-      content: exportWindowsAhk(layout, layer),
-      title: "Windows — AutoHotkey",
-      hint: hebrew
-        ? "AHK v2, запустите файл. Pause — вкл/выкл. J затем K M N F C — концевые ך ם ן ף ץ."
-        : "Любой ПК с Windows: установите AHK v2 и запустите файл. Pause — вкл/выкл. Q→цифра — слой.",
+      content: "", // filled by InstallPanel from /downloads/klavia.ahk
+      title: "Windows — 5 раскладок",
+      hint: "Pause: стандарт рус → англ → стандарт ивр → клавиа-ру → клавиа-ивр. Трей — выбрать сразу. Для стандартного иврита добавьте язык «Иврит» в Windows.",
     },
     {
       filename: hebrew ? "Klavia-Hebrew.keylayout" : "Klavia.keylayout",

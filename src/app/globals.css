@@ -118,3 +118,15 @@ body {
   background-size: 48px 48px;
   mask-image: linear-gradient(to bottom, black 30%, transparent 95%);
 }
+
+.klavia-rtl {
+  direction: rtl;
+  unicode-bidi: isolate;
+  text-align: right;
+}
+
+textarea.klavia-rtl {
+  direction: rtl;
+  unicode-bidi: isolate;
+  text-align: right;
+}
