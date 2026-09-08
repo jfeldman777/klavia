@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { KeyId, KeyMapping, LayerSlot, ScriptId } from "@/lib/layout-data";
+import type { KeyId, KeyMapping, LayerSlot } from "@/lib/layout-data";
 import {
   ALL_KEYS,
   layerCodeMap,
@@ -9,12 +9,16 @@ import {
   layoutToCodeMap,
   typedChar,
 } from "@/lib/layout-data";
+import {
+  isRtlMode,
+  type InputModeId,
+} from "@/lib/input-modes";
 import { MiniKeyboard } from "./mini-keyboard";
 
 type Props = {
   layout: Record<KeyId, KeyMapping>;
   layer: LayerSlot[];
-  script: ScriptId;
+  mode: InputModeId;
   onPress: (id: KeyId | null) => void;
   layerOpen: boolean;
   onLayerOpenChange: (open: boolean) => void;
@@ -23,11 +27,54 @@ type Props = {
 const SAMPLE_RU =
   "Щука, подъём: пиши через Q → цифру. Пример: рыба (V), мир, перо, книга.";
 const SAMPLE_HE = "שלום עולם";
+const SAMPLE_STD_RU = "Съешь же ещё этих мягких французских булок, да выпей чаю.";
+const SAMPLE_STD_EN = "The quick brown fox jumps over the lazy dog.";
+const SAMPLE_STD_HE = "שלום עולם — מקלדת עברית רגילה.";
+
+function testerCopy(mode: InputModeId) {
+  switch (mode) {
+    case "std-ru":
+      return {
+        hint: "Стандарт ЙЦУКЕН. Pause — следующий режим.",
+        sample: SAMPLE_STD_RU,
+        placeholder: "Печатайте стандартным русским…",
+        lang: "ru" as const,
+      };
+    case "std-en":
+      return {
+        hint: "Стандарт QWERTY. Pause — следующий режим.",
+        sample: SAMPLE_STD_EN,
+        placeholder: "Type in English…",
+        lang: "en" as const,
+      };
+    case "std-he":
+      return {
+        hint: "Стандартная ивритская клавиатура Windows. Pause — следующий режим.",
+        sample: SAMPLE_STD_HE,
+        placeholder: "הקלידו במקלדת רגילה…",
+        lang: "he" as const,
+      };
+    case "k-he":
+      return {
+        hint: "ИВРИТ-КЛАВИА, справа налево. J затем K M N F C — концевые ך ם ן ף ץ.",
+        sample: SAMPLE_HE,
+        placeholder: "הקלידו כאן…",
+        lang: "he" as const,
+      };
+    default:
+      return {
+        hint: "РУ-КЛАВИА (Совпад). Q → цифра 2–0. Б — клавиша V.",
+        sample: SAMPLE_RU,
+        placeholder: "Начните печатать… Q → миника",
+        lang: "ru" as const,
+      };
+  }
+}
 
 export function TypingTester({
   layout,
   layer,
-  script,
+  mode,
   onPress,
   layerOpen,
   onLayerOpenChange,
@@ -40,14 +87,14 @@ export function TypingTester({
   const layerOpenRef = useRef(layerOpen);
   const onPressRef = useRef(onPress);
   const onLayerOpenChangeRef = useRef(onLayerOpenChange);
-  const scriptRef = useRef(script);
+  const modeRef = useRef(mode);
 
   layoutRef.current = layout;
   layerRef.current = layer;
   layerOpenRef.current = layerOpen;
   onPressRef.current = onPress;
   onLayerOpenChangeRef.current = onLayerOpenChange;
-  scriptRef.current = script;
+  modeRef.current = mode;
 
   const insert = (ch: string) => {
     const el = ref.current;
@@ -64,8 +111,6 @@ export function TypingTester({
       if (e.ctrlKey || e.metaKey || e.altKey) return false;
       return (
         e.code.startsWith("Key") ||
-        e.code.startsWith("Digit") ||
-        e.code === "Space" ||
         e.code === "Semicolon" ||
         e.code === "Quote" ||
         e.code === "Comma" ||
@@ -81,8 +126,12 @@ export function TypingTester({
       const el = ref.current;
       if (!el || document.activeElement !== el) return;
 
-      const layerId = layerKeyId(layoutRef.current);
-      const hebrew = scriptRef.current === "he";
+      const layerEnabled = layerRef.current.length > 0;
+      const layerId = layerEnabled
+        ? layerKeyId(layoutRef.current)
+        : null;
+
+      if (e.code === "Pause") return;
 
       if (e.code === "Escape") {
         if (layerOpenRef.current) {
@@ -93,7 +142,7 @@ export function TypingTester({
         return;
       }
 
-      if (layerOpenRef.current) {
+      if (layerEnabled && layerOpenRef.current) {
         const mini = layerCodeMap(layerRef.current);
         if (e.code in mini) {
           e.preventDefault();
@@ -120,7 +169,7 @@ export function TypingTester({
         return;
       }
 
-      if (e.code === layerId) {
+      if (layerId && e.code === layerId) {
         e.preventDefault();
         e.stopPropagation();
         onPressRef.current(layerId);
@@ -139,15 +188,14 @@ export function TypingTester({
         return;
       }
 
-      // Не даём системному «Стандартный иврит» пролезть в поле.
-      if (hebrew && stealOsLetter(e)) {
+      if (stealOsLetter(e)) {
         e.preventDefault();
         e.stopPropagation();
       }
     };
 
     const onBeforeInput = (e: Event) => {
-      if (!active || scriptRef.current !== "he") return;
+      if (!active || !isRtlMode(modeRef.current)) return;
       const el = ref.current;
       if (!el || document.activeElement !== el) return;
       const ie = e as InputEvent;
@@ -169,6 +217,8 @@ export function TypingTester({
     };
   }, [active]);
 
+  const copy = testerCopy(mode);
+  const rtl = isRtlMode(mode);
   const layerLatin =
     ALL_KEYS.find((k) => k.id === layerKeyId(layout))?.latin ?? "Q";
 
@@ -179,11 +229,7 @@ export function TypingTester({
           <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-[0.18em] text-[var(--ink-faint)]">
             Проверка набора
           </p>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            {script === "he"
-              ? "Письмо справа налево. Стандартный иврит Windows не используется. J затем K M N F C — концевые ך ם ן ף ץ."
-              : "Q открывает миниклавиатуру оставшихся букв, затем цифра 2–0. Б — клавиша V."}
-          </p>
+          <p className="mt-1 text-sm text-[var(--ink-muted)]">{copy.hint}</p>
         </div>
         <button
           type="button"
@@ -199,12 +245,12 @@ export function TypingTester({
       </div>
       <p
         className={`mb-3 rounded-lg bg-[var(--surface-2)] px-3 py-2 font-[family-name:var(--font-hebrew)] text-sm text-[var(--ink-muted)] ${
-          script === "he" ? "klavia-rtl" : ""
+          rtl ? "klavia-rtl" : ""
         }`}
-        dir={script === "he" ? "rtl" : "ltr"}
-        lang={script === "he" ? "he" : "ru"}
+        dir={rtl ? "rtl" : "ltr"}
+        lang={copy.lang}
       >
-        {script === "he" ? SAMPLE_HE : SAMPLE_RU}
+        {copy.sample}
       </p>
 
       <div className="mb-3">
@@ -212,9 +258,9 @@ export function TypingTester({
           open={layerOpen}
           layer={layer}
           layerKeyLatin={layerLatin}
-          layerTitle={script === "he" ? "Концевые формы" : "Миниклавиатура"}
+          layerTitle={mode === "k-he" ? "Концевые формы" : "Миниклавиатура"}
           layerHint={
-            script === "he"
+            mode === "k-he"
               ? "J, затем K M N F C. Esc — закрыть."
               : "Нажмите цифру или кликните букву. Esc — закрыть."
           }
@@ -227,12 +273,12 @@ export function TypingTester({
         />
       </div>
 
-      <div dir={script === "he" ? "rtl" : "ltr"} lang={script === "he" ? "he" : undefined}>
+      <div dir={rtl ? "rtl" : "ltr"} lang={rtl ? "he" : undefined}>
         <textarea
         ref={ref}
         value={value}
-        dir={script === "he" ? "rtl" : "ltr"}
-        lang={script === "he" ? "he" : "ru"}
+        dir={rtl ? "rtl" : "ltr"}
+        lang={copy.lang}
         onChange={(e) => setValue(e.target.value)}
         onFocus={() => setActive(true)}
         onBlur={() => {
@@ -245,20 +291,16 @@ export function TypingTester({
         }}
         rows={4}
         spellCheck={false}
-        placeholder={
-          script === "he"
-            ? "הקלידו כאן…"
-            : "Начните печатать… Q → миника"
-        }
+        placeholder={copy.placeholder}
         autoComplete="off"
         autoCorrect="off"
         autoCapitalize="off"
         onBeforeInput={(e) => {
-          if (script !== "he") return;
+          if (!rtl) return;
           if (e.inputType.startsWith("insert") && e.data) e.preventDefault();
         }}
         className={`w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--bg)] px-4 py-3 font-[family-name:var(--font-hebrew)] text-lg leading-relaxed text-[var(--ink)] outline-none ring-[var(--accent)] placeholder:text-[var(--ink-faint)] focus:ring-2 ${
-          script === "he" ? "klavia-rtl" : ""
+          rtl ? "klavia-rtl" : ""
         }`}
       />
       </div>

@@ -541,7 +541,7 @@ export function buildDownloadBundles(
       mime: "text/plain;charset=utf-8",
       content: "", // filled by InstallPanel from /downloads/klavia.ahk
       title: "Windows — 5 раскладок",
-      hint: "Pause: стандарт рус → англ → стандарт ивр → клавиа-ру → клавиа-ивр. Трей — выбрать сразу. Для стандартного иврита добавьте язык «Иврит» в Windows.",
+      hint: "Pause по кругу: РУ → АНГЛ → ИВРИТ → РУ-КЛАВИА → ИВРИТ-КЛАВИА. Трей — выбрать сразу. Для стандартного ИВРИТ добавьте язык «Иврит» в Windows.",
     },
     {
       filename: hebrew ? "Klavia-Hebrew.keylayout" : "Klavia.keylayout",

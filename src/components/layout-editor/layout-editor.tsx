@@ -32,6 +32,15 @@ import {
   type LayerSlot,
   type ScriptId,
 } from "@/lib/layout-data";
+import {
+  INPUT_MODE_STORAGE_KEY,
+  displayLayoutFor,
+  isKlaviaMode,
+  nextInputMode,
+  parseInputMode,
+  type InputModeId,
+} from "@/lib/input-modes";
+import { LayoutModeSwitch } from "./layout-mode-switch";
 import { RotateCcw } from "lucide-react";
 
 function loadScriptState(id: ScriptId): {
@@ -59,6 +68,7 @@ function loadScriptState(id: ScriptId): {
 
 export function LayoutEditor() {
   const [script, setScript] = useState<ScriptId>("ru");
+  const [inputMode, setInputMode] = useState<InputModeId>("k-ru");
   const [layout, setLayout] = useState<Record<KeyId, KeyMapping>>(() =>
     cloneLayout(),
   );
@@ -82,6 +92,10 @@ export function LayoutEditor() {
       setScript(id);
       setLayout(loaded.layout);
       setLayer(loaded.layer);
+      const mode =
+        parseInputMode(localStorage.getItem(INPUT_MODE_STORAGE_KEY)) ??
+        (id === "he" ? "k-he" : "k-ru");
+      setInputMode(mode);
       if (id === "he") {
         setSelectedLayerShortcut(HEBREW_LAYER[0]?.shortcut ?? "K");
       }
@@ -95,6 +109,11 @@ export function LayoutEditor() {
     if (!hydrated) return;
     localStorage.setItem(SCRIPT_STORAGE_KEY, script);
   }, [script, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(INPUT_MODE_STORAGE_KEY, inputMode);
+  }, [inputMode, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -222,70 +241,74 @@ export function LayoutEditor() {
     );
   };
 
+  const applyInputMode = (id: InputModeId) => {
+    setInputMode(id);
+    setLayerOpen(false);
+    if (id === "k-ru") switchScript("ru");
+    if (id === "k-he") switchScript("he");
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Pause") return;
+      e.preventDefault();
+      e.stopPropagation();
+      applyInputMode(nextInputMode(inputMode));
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [inputMode, script, layout, layer]);
+
+  const klavia = isKlaviaMode(inputMode);
+  const shownLayout = displayLayoutFor(inputMode, layout);
+
   const handleSelectKey = (id: KeyId) => {
+    if (!klavia) return;
     setSelectedId(id);
     if (id === activeLayerKey) setLayerOpen(true);
   };
 
   return (
     <div className="flex w-full flex-col gap-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <div className="flex rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-0.5">
-            {(["ru", "he"] as const).map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => switchScript(id)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                  script === id
-                    ? "bg-[var(--accent)] text-[var(--accent-fg)]"
-                    : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
-                }`}
-              >
-                {SCRIPTS[id].label}
-              </button>
-            ))}
-          </div>
-          {script === "he" && (
-            <p className="text-xs text-[var(--ink-muted)]">
-              Справа налево · без стандартной раскладки Windows
-            </p>
-          )}
-          <LegendDot
-            color="var(--match)"
-            label={`Графика · ${counts.homoglyph}`}
-          />
-          {script === "ru" && (
+      <LayoutModeSwitch value={inputMode} onChange={applyInputMode} />
+      {klavia && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
             <LegendDot
-              color="var(--semi)"
-              label={`Полусовпад. · ${counts.semi}`}
+              color="var(--match)"
+              label={`Графика · ${counts.homoglyph}`}
             />
-          )}
-          <LegendDot
-            color="var(--sound)"
-            label={`Звук · ${counts.phonetic}`}
-          />
-          <LegendDot color="var(--extra)" label={`Доп. · ${counts.extra}`} />
-          <LegendDot
-            color="var(--layer)"
-            label={`${profile.layerHint} · ${layer.length}`}
-          />
+            {script === "ru" && (
+              <LegendDot
+                color="var(--semi)"
+                label={`Полусовпад. · ${counts.semi}`}
+              />
+            )}
+            <LegendDot
+              color="var(--sound)"
+              label={`Звук · ${counts.phonetic}`}
+            />
+            <LegendDot color="var(--extra)" label={`Доп. · ${counts.extra}`} />
+            <LegendDot
+              color="var(--layer)"
+              label={`${profile.layerHint} · ${layer.length}`}
+            />
+          </div>
+          <Button variant="secondary" size="sm" onClick={reset}>
+            <RotateCcw className="h-3.5 w-3.5" /> Сбросить к {profile.label}
+          </Button>
         </div>
-        <Button variant="secondary" size="sm" onClick={reset}>
-          <RotateCcw className="h-3.5 w-3.5" /> Сбросить к {profile.label}
-        </Button>
-      </div>
+      )}
 
       <Keyboard
-        layout={layout}
-        selectedId={selectedId}
+        layout={shownLayout}
+        selectedId={klavia ? selectedId : null}
         pressedId={pressedId}
-        conflicts={conflictIds}
+        conflicts={klavia ? conflictIds : new Set()}
         onSelect={handleSelectKey}
       />
 
-      {selectedId === activeLayerKey && (
+      {klavia && selectedId === activeLayerKey && (
         <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <MiniKeyboard
             open
@@ -321,7 +344,7 @@ export function LayoutEditor() {
         </div>
       )}
 
-      {(missing.length > 0 || duplicates.size > 0) && (
+      {klavia && (missing.length > 0 || duplicates.size > 0) && (
         <div className="flex flex-wrap gap-3 text-sm">
           {missing.length > 0 && (
             <p className="rounded-full border border-[var(--warn-line)] bg-[var(--warn-bg)] px-3 py-1 text-[var(--warn)]">
@@ -336,29 +359,31 @@ export function LayoutEditor() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <LetterPicker
-          selected={selected}
-          mapping={selectedId ? layout[selectedId] : null}
-          used={used}
-          alphabet={profile.alphabet}
-          script={script}
-          layerHint={
-            script === "he"
-              ? "J не печатает букву — открывает слой концевых: ך ם ן ף ץ. В наборе: J → K M N F C."
-              : "Q не печатает букву сама — открывает слой оставшихся: П Ш Щ Ц Ъ Ы Ь Э Ё. В наборе: Q → цифра 2–0. Б на клавише V."
-          }
-          onAssign={assign}
-          onToggleLock={toggleLock}
-          onOpenLayer={() => setLayerOpen(true)}
-        />
+      <div className={`grid gap-6 ${klavia ? "lg:grid-cols-2" : ""}`}>
+        {klavia && (
+          <LetterPicker
+            selected={selected}
+            mapping={selectedId ? layout[selectedId] : null}
+            used={used}
+            alphabet={profile.alphabet}
+            script={script}
+            layerHint={
+              script === "he"
+                ? "J не печатает букву — открывает слой концевых: ך ם ן ף ץ. В наборе: J → K M N F C."
+                : "Q не печатает букву сама — открывает слой оставшихся: П Ш Щ Ц Ъ Ы Ь Э Ё. В наборе: Q → цифра 2–0. Б на клавише V."
+            }
+            onAssign={assign}
+            onToggleLock={toggleLock}
+            onOpenLayer={() => setLayerOpen(true)}
+          />
+        )}
         <TypingTester
-          key={script}
-          layout={layout}
-          layer={layer}
-          script={script}
+          key={inputMode}
+          layout={shownLayout}
+          layer={klavia ? layer : []}
+          mode={inputMode}
           onPress={setPressedId}
-          layerOpen={layerOpen}
+          layerOpen={klavia && layerOpen}
           onLayerOpenChange={setLayerOpen}
         />
       </div>
@@ -367,7 +392,7 @@ export function LayoutEditor() {
 
       <ExportPanel layout={layout} layer={layer} />
 
-      <PairTables script={script} layer={layer} />
+      {klavia && <PairTables script={script} layer={layer} />}
     </div>
   );
 }

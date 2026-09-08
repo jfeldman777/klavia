@@ -1,9 +1,10 @@
 ﻿; Klavia — переключение раскладок (AutoHotkey v2)
-; Pause — следующий режим:
-;   стандарт рус → англ → стандарт ивр → клавиа-ру → клавиа-ивр → …
+; Pause — по кругу:
+;   РУ → АНГЛ → ИВРИТ → РУ-КЛАВИА → ИВРИТ-КЛАВИА → …
 ; Правый клик по иконке в трее — выбрать режим сразу.
-; клавиа-ру: Совпад. Q затем 2–0 — П Ш Щ Ц Ъ Ы Ь Э Ё. V → Б
-; клавиа-ивр: ваша карта, справа налево. J затем K M N F C — концевые
+; РУ / АНГЛ / ИВРИТ — стандарт Windows.
+; РУ-КЛАВИА: Совпад. Q затем 2–0 — П Ш Щ Ц Ъ Ы Ь Э Ё. V → Б
+; ИВРИТ-КЛАВИА: карта Совпад, справа налево. J затем K M N F C — концевые
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 #UseHook True
@@ -37,11 +38,11 @@ SendHe(ch) {
 
 ModeTitle(mode) {
     names := Map(
-        "std-ru", "стандарт рус",
-        "std-en", "англ",
-        "std-he", "стандарт ивр",
-        "k-ru", "клавиа-ру",
-        "k-he", "клавиа-ивр"
+        "std-ru", "РУ",
+        "std-en", "АНГЛ",
+        "std-he", "ИВРИТ",
+        "k-ru", "РУ-КЛАВИА",
+        "k-he", "ИВРИТ-КЛАВИА"
     )
     return names.Has(mode) ? names[mode] : mode
 }
@@ -76,11 +77,11 @@ NextMode() {
 }
 
 A_TrayMenu.Delete()
-A_TrayMenu.Add("стандарт рус", (*) => ApplyMode("std-ru"))
-A_TrayMenu.Add("англ", (*) => ApplyMode("std-en"))
-A_TrayMenu.Add("стандарт ивр", (*) => ApplyMode("std-he"))
-A_TrayMenu.Add("клавиа-ру", (*) => ApplyMode("k-ru"))
-A_TrayMenu.Add("клавиа-ивр", (*) => ApplyMode("k-he"))
+A_TrayMenu.Add("РУ", (*) => ApplyMode("std-ru"))
+A_TrayMenu.Add("АНГЛ", (*) => ApplyMode("std-en"))
+A_TrayMenu.Add("ИВРИТ", (*) => ApplyMode("std-he"))
+A_TrayMenu.Add("РУ-КЛАВИА", (*) => ApplyMode("k-ru"))
+A_TrayMenu.Add("ИВРИТ-КЛАВИА", (*) => ApplyMode("k-he"))
 A_TrayMenu.Add()
 A_TrayMenu.Add("Выход", (*) => ExitApp())
 
@@ -97,7 +98,7 @@ Esc:: {
 
 ApplyMode("std-ru")
 
-; ===== клавиа-ру =====
+; ===== РУ-КЛАВИА =====
 #HotIf KlaviaMode = "k-ru"
 SC010:: {  ; Q
     global KlaviaLayer
@@ -250,7 +251,7 @@ SC031::SendText "и"
 SC032::SendText "м"
 +SC032::SendText "М"
 
-; ===== клавиа-ивр =====
+; ===== ИВРИТ-КЛАВИА =====
 #HotIf KlaviaMode = "k-he"
 SC024:: {  ; J — концевые
     global KlaviaLayer
