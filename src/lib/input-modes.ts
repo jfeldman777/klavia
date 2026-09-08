@@ -11,12 +11,38 @@ export const INPUT_MODES: {
   id: InputModeId;
   label: string;
   hint: string;
+  explain: string;
 }[] = [
-  { id: "std-ru", label: "РУ", hint: "стандарт ЙЦУКЕН" },
-  { id: "std-en", label: "АНГЛ", hint: "стандарт QWERTY" },
-  { id: "std-he", label: "ИВРИТ", hint: "стандартная ивритская" },
-  { id: "k-ru", label: "РУ-КЛАВИА", hint: "Совпад" },
-  { id: "k-he", label: "ИВРИТ-КЛАВИА", hint: "карта Совпад, справа налево" },
+  {
+    id: "std-ru",
+    label: "РУ",
+    hint: "обычная русская",
+    explain: "обычная русская",
+  },
+  {
+    id: "std-en",
+    label: "АНГЛ",
+    hint: "обычная английская",
+    explain: "обычная английская",
+  },
+  {
+    id: "std-he",
+    label: "ИВРИТ",
+    hint: "обычная ивритская",
+    explain: "обычная ивритская",
+  },
+  {
+    id: "k-ru",
+    label: "РУ-КЛАВИА",
+    hint: "русская по английским буквам на клавишах",
+    explain: "по буквам на клавишах",
+  },
+  {
+    id: "k-he",
+    label: "ИВРИТ-КЛАВИА",
+    hint: "иврит на тех же клавишах, справа налево",
+    explain: "иврит на тех же клавишах",
+  },
 ];
 
 export const INPUT_MODE_STORAGE_KEY = "klavia-input-mode-v1";
