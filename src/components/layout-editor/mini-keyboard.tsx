@@ -8,6 +8,9 @@ type Props = {
   layer: LayerSlot[];
   onPick: (letter: string) => void;
   onClose: () => void;
+  layerKeyLatin?: string;
+  layerTitle?: string;
+  layerHint?: string;
   /** Редактирование слота (клик ПКМ / долгий — нет, просто select for editor). */
   editable?: boolean;
   selectedShortcut?: string | null;
@@ -19,6 +22,9 @@ export function MiniKeyboard({
   layer,
   onPick,
   onClose,
+  layerKeyLatin = "Q",
+  layerTitle = "миниклавиатура",
+  layerHint = "Нажмите цифру или кликните букву. Esc — закрыть.",
   editable,
   selectedShortcut,
   onSelectSlot,
@@ -29,16 +35,14 @@ export function MiniKeyboard({
     <div
       className="animate-rise rounded-2xl border border-[var(--layer-line)] bg-[var(--layer-bg)] p-4 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)] backdrop-blur-md"
       role="dialog"
-      aria-label="Миниклавиатура оставшихся букв"
+      aria-label={layerTitle}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-[0.18em] text-[var(--layer)]">
-            Q · миниклавиатура
+            {layerKeyLatin} · {layerTitle}
           </p>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Нажмите цифру 1–0 или кликните букву. Esc — закрыть.
-          </p>
+          <p className="mt-1 text-sm text-[var(--ink-muted)]">{layerHint}</p>
         </div>
         <button
           type="button"
@@ -70,7 +74,7 @@ export function MiniKeyboard({
             <span className="font-[family-name:var(--font-mono)] text-[10px] text-[var(--ink-faint)]">
               {slot.shortcut}
             </span>
-            <span className="font-[family-name:var(--font-display)] text-2xl text-[var(--layer)]">
+            <span className="font-[family-name:var(--font-hebrew)] text-2xl text-[var(--layer)]">
               {slot.letter}
             </span>
           </button>

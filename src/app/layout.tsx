@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope, JetBrains_Mono, Unbounded } from "next/font/google";
+import { Manrope, JetBrains_Mono, Unbounded, Noto_Sans_Hebrew } from "next/font/google";
 import "./globals.css";
 
 const display = Unbounded({
@@ -20,17 +20,23 @@ const mono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
+const hebrew = Noto_Sans_Hebrew({
+  variable: "--font-hebrew",
+  subsets: ["hebrew"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
-  title: "Klavia / Совпад — русская раскладка по совпадениям с EN",
+  title: "Klavia / Совпад — русская и ивритская раскладки",
   description:
-    "Русская клавиатура: графика, полусовпадения, звук. Оставшиеся через Q. Работает в браузере и ставится на Windows/macOS/Linux.",
+    "Русская клавиатура по совпадениям с EN и иврит на тех же клавишах. Концевые иврита: J затем буква. В браузере и на Windows/macOS/Linux.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ru"
-      className={`${display.variable} ${body.variable} ${mono.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} ${mono.variable} ${hebrew.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

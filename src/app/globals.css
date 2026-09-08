@@ -69,6 +69,10 @@ body {
   font-family: var(--font-body), Georgia, serif;
 }
 
+.font-letter {
+  font-family: var(--font-hebrew), var(--font-display), sans-serif;
+}
+
 ::selection {
   background: rgba(212, 160, 23, 0.35);
   color: var(--ink);

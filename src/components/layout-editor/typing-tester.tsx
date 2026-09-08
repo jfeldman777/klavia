@@ -1,28 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { KeyId, KeyMapping, LayerSlot } from "@/lib/layout-data";
+import type { KeyId, KeyMapping, LayerSlot, ScriptId } from "@/lib/layout-data";
 import {
-  LAYER_KEY_ID,
+  ALL_KEYS,
   layerCodeMap,
+  layerKeyId,
   layoutToCodeMap,
+  typedChar,
 } from "@/lib/layout-data";
 import { MiniKeyboard } from "./mini-keyboard";
 
 type Props = {
   layout: Record<KeyId, KeyMapping>;
   layer: LayerSlot[];
+  script: ScriptId;
   onPress: (id: KeyId | null) => void;
   layerOpen: boolean;
   onLayerOpenChange: (open: boolean) => void;
 };
 
-const SAMPLE =
-  "Щука, подъём: пиши через Q → цифру. Пример: рыба, мир, перо, книга.";
+const SAMPLE_RU =
+  "Щука, подъём: пиши через Q → цифру. Пример: рыба (V), мир, перо, книга.";
+const SAMPLE_HE =
+  "שלום. Концевые: J затем K M N F C → ך ם ן ף ץ";
 
 export function TypingTester({
   layout,
   layer,
+  script,
   onPress,
   layerOpen,
   onLayerOpenChange,
@@ -60,6 +66,8 @@ export function TypingTester({
       const el = ref.current;
       if (!el || document.activeElement !== el) return;
 
+      const layerId = layerKeyId(layoutRef.current);
+
       if (e.code === "Escape") {
         if (layerOpenRef.current) {
           e.preventDefault();
@@ -72,23 +80,29 @@ export function TypingTester({
         const mini = layerCodeMap(layerRef.current);
         if (e.code in mini) {
           e.preventDefault();
-          const letter = mini[e.code];
-          const ch = e.shiftKey ? letter.toUpperCase() : letter.toLowerCase();
-          insert(ch);
+          insert(typedChar(mini[e.code], e.shiftKey));
           onLayerOpenChangeRef.current(false);
-          onPressRef.current(LAYER_KEY_ID);
+          onPressRef.current(layerId);
           return;
         }
-        // пока слой открыт — не печатать обычные буквы
+        const codeMap = layoutToCodeMap(layoutRef.current);
+        if (e.code in codeMap) {
+          e.preventDefault();
+          const letter = codeMap[e.code as KeyId];
+          if (letter) insert(typedChar(letter, e.shiftKey));
+          onLayerOpenChangeRef.current(false);
+          onPressRef.current(e.code as KeyId);
+          return;
+        }
         if (e.code.startsWith("Key") || e.code.startsWith("Digit")) {
           e.preventDefault();
         }
         return;
       }
 
-      if (e.code === LAYER_KEY_ID) {
+      if (e.code === layerId) {
         e.preventDefault();
-        onPressRef.current(LAYER_KEY_ID);
+        onPressRef.current(layerId);
         onLayerOpenChangeRef.current(true);
         return;
       }
@@ -99,8 +113,7 @@ export function TypingTester({
         const letter = codeMap[e.code as KeyId];
         if (!letter) return;
         onPressRef.current(e.code as KeyId);
-        const ch = e.shiftKey ? letter.toUpperCase() : letter.toLowerCase();
-        insert(ch);
+        insert(typedChar(letter, e.shiftKey));
       }
     };
 
@@ -114,6 +127,9 @@ export function TypingTester({
     };
   }, [active]);
 
+  const layerLatin =
+    ALL_KEYS.find((k) => k.id === layerKeyId(layout))?.latin ?? "Q";
+
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)]/80 p-5 backdrop-blur-sm">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -122,7 +138,9 @@ export function TypingTester({
             Проверка набора
           </p>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Q открывает миниклавиатуру оставшихся букв, затем цифра 1–0.
+            {script === "he"
+              ? "J открывает концевые: затем K M N F C → ך ם ן ף ץ."
+              : "Q открывает миниклавиатуру оставшихся букв, затем цифра 2–0. Б — клавиша V."}
           </p>
         </div>
         <button
@@ -137,18 +155,27 @@ export function TypingTester({
           Очистить
         </button>
       </div>
-      <p className="mb-3 rounded-lg bg-[var(--surface-2)] px-3 py-2 font-[family-name:var(--font-mono)] text-sm text-[var(--ink-muted)]">
-        {SAMPLE}
+      <p
+        className="mb-3 rounded-lg bg-[var(--surface-2)] px-3 py-2 font-[family-name:var(--font-hebrew)] text-sm text-[var(--ink-muted)]"
+        dir={script === "he" ? "rtl" : "ltr"}
+      >
+        {script === "he" ? SAMPLE_HE : SAMPLE_RU}
       </p>
 
       <div className="mb-3">
         <MiniKeyboard
           open={layerOpen}
           layer={layer}
+          layerKeyLatin={layerLatin}
+          layerTitle={script === "he" ? "Концевые формы" : "Миниклавиатура"}
+          layerHint={
+            script === "he"
+              ? "J, затем K M N F C. Esc — закрыть."
+              : "Нажмите цифру или кликните букву. Esc — закрыть."
+          }
           onClose={() => onLayerOpenChange(false)}
           onPick={(letter) => {
-            const ch = letter.toLowerCase();
-            insert(ch);
+            insert(typedChar(letter, false));
             onLayerOpenChange(false);
             ref.current?.focus();
           }}
@@ -158,10 +185,11 @@ export function TypingTester({
       <textarea
         ref={ref}
         value={value}
+        dir={script === "he" ? "rtl" : "ltr"}
+        lang={script === "he" ? "he" : "ru"}
         onChange={(e) => setValue(e.target.value)}
         onFocus={() => setActive(true)}
         onBlur={() => {
-          // не закрываем слой сразу — клик по минике успеет сработать
           setTimeout(() => {
             if (document.activeElement !== ref.current) {
               setActive(false);
@@ -171,8 +199,12 @@ export function TypingTester({
         }}
         rows={4}
         spellCheck={false}
-        placeholder="Начните печатать… Q → миника"
-        className="w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--bg)] px-4 py-3 font-[family-name:var(--font-display)] text-lg leading-relaxed text-[var(--ink)] outline-none ring-[var(--accent)] placeholder:text-[var(--ink-faint)] focus:ring-2"
+        placeholder={
+          script === "he"
+            ? "הקלידו כאן… J → концевые"
+            : "Начните печатать… Q → миника"
+        }
+        className="w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--bg)] px-4 py-3 font-[family-name:var(--font-hebrew)] text-lg leading-relaxed text-[var(--ink)] outline-none ring-[var(--accent)] placeholder:text-[var(--ink-faint)] focus:ring-2"
       />
     </div>
   );

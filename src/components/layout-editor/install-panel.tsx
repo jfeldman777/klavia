@@ -42,10 +42,11 @@ export function InstallPanel({ layout, layer }: Props) {
         <h2 className="mt-1 font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
           Как пользоваться Klavia / Совпад
         </h2>
-        <p className="mt-2 max-w-2xl text-sm text-[var(--ink-muted)]">
-          Три способа: веб (сразу), Windows AHK (во всех программах), файлы
-          раскладки для macOS / Linux.
-        </p>
+          <p className="mt-2 max-w-2xl text-sm text-[var(--ink-muted)]">
+            Три способа: веб (сразу), Windows AHK (во всех программах), файлы
+            раскладки для macOS / Linux. Переключатель Совпад / Иврит — над
+            клавиатурой; скачивается активная раскладка.
+          </p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -55,8 +56,8 @@ export function InstallPanel({ layout, layer }: Props) {
             <span className="font-medium">Веб — любой ПК и ОС</span>
           </div>
           <p className="text-sm text-[var(--ink-muted)]">
-            Откройте сайт Klavia в браузере, печатайте в поле проверки. Q →
-            цифра для оставшихся букв. Работает без установки.
+            Откройте сайт Klavia в браузере, печатайте в поле проверки. Русский:
+            Q → цифра. Иврит: J → буква концевой формы. Работает без установки.
           </p>
           <a
             href="#editor"

@@ -1,8 +1,9 @@
-; Klavia / Совпад — портативная раскладка для Windows (AutoHotkey v2)
+﻿; Klavia / Совпад — портативная раскладка для Windows (AutoHotkey v2)
 ; 1) Установите AutoHotkey v2: https://www.autohotkey.com/
 ; 2) Запустите этот файл — раскладка активна в любом приложении
-; 3) Переключение: Pause (или правый Ctrl+Space) — вкл/выкл
-; Q затем 1–0 — миниклавиатура оставшихся букв
+; 3) Переключение: Pause — вкл/выкл
+; Клавиши — физические QWERTY (сканкоды), работают поверх русской раскладки.
+; V → Б. Q затем 2–0 — П Ш Щ Ц Ъ Ы Ь Э Ё
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 SendMode "Input"
@@ -30,130 +31,118 @@ Esc:: {
 
 #HotIf KlaviaOn
 
-q:: {
+SC010:: {  ; Q
     global KlaviaLayer
     KlaviaLayer := true
 }
-+q:: {
++SC010:: {
     global KlaviaLayer
     KlaviaLayer := true
 }
 
 #HotIf KlaviaOn && KlaviaLayer
-1:: {
-    global KlaviaLayer
-    SendText "б"
-    KlaviaLayer := false
-}
-+1:: {
-    global KlaviaLayer
-    SendText "Б"
-    KlaviaLayer := false
-}
-
-#HotIf KlaviaOn && KlaviaLayer
-2:: {
+SC003:: {  ; 2 → П
     global KlaviaLayer
     SendText "п"
     KlaviaLayer := false
 }
-+2:: {
++SC003:: {
     global KlaviaLayer
     SendText "П"
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
-3:: {
+SC004:: {  ; 3 → Ш
     global KlaviaLayer
     SendText "ш"
     KlaviaLayer := false
 }
-+3:: {
++SC004:: {
     global KlaviaLayer
     SendText "Ш"
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
-4:: {
+SC005:: {  ; 4 → Щ
     global KlaviaLayer
     SendText "щ"
     KlaviaLayer := false
 }
-+4:: {
++SC005:: {
     global KlaviaLayer
     SendText "Щ"
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
-5:: {
+SC006:: {  ; 5 → Ц
     global KlaviaLayer
     SendText "ц"
     KlaviaLayer := false
 }
-+5:: {
++SC006:: {
     global KlaviaLayer
     SendText "Ц"
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
-6:: {
+SC007:: {  ; 6 → Ъ
     global KlaviaLayer
     SendText "ъ"
     KlaviaLayer := false
 }
-+6:: {
++SC007:: {
     global KlaviaLayer
     SendText "Ъ"
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
-7:: {
+SC008:: {  ; 7 → Ы
     global KlaviaLayer
     SendText "ы"
     KlaviaLayer := false
 }
-+7:: {
++SC008:: {
     global KlaviaLayer
     SendText "Ы"
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
-8:: {
+SC009:: {  ; 8 → Ь
     global KlaviaLayer
     SendText "ь"
     KlaviaLayer := false
 }
-+8:: {
++SC009:: {
     global KlaviaLayer
     SendText "Ь"
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
-9:: {
+SC00A:: {  ; 9 → Э
     global KlaviaLayer
     SendText "э"
     KlaviaLayer := false
 }
-+9:: {
++SC00A:: {
     global KlaviaLayer
     SendText "Э"
     KlaviaLayer := false
 }
 
 #HotIf KlaviaOn && KlaviaLayer
-0:: {
+SC00B:: {  ; 0 → Ё
     global KlaviaLayer
     SendText "ё"
     KlaviaLayer := false
 }
-+0:: {
++SC00B:: {
     global KlaviaLayer
     SendText "Ё"
     KlaviaLayer := false
@@ -161,51 +150,53 @@ q:: {
 
 #HotIf KlaviaOn && !KlaviaLayer
 
-e::SendText "е"
-+e::SendText "Е"
-r::SendText "я"
-+r::SendText "Я"
-t::SendText "т"
-+t::SendText "Т"
-y::SendText "у"
-+y::SendText "У"
-u::SendText "ю"
-+u::SendText "Ю"
-i::SendText "й"
-+i::SendText "Й"
-o::SendText "о"
-+o::SendText "О"
-p::SendText "р"
-+p::SendText "Р"
-a::SendText "а"
-+a::SendText "А"
-s::SendText "ч"
-+s::SendText "Ч"
-d::SendText "д"
-+d::SendText "Д"
-f::SendText "ф"
-+f::SendText "Ф"
-g::SendText "г"
-+g::SendText "Г"
-h::SendText "н"
-+h::SendText "Н"
-j::SendText "ж"
-+j::SendText "Ж"
-k::SendText "к"
-+k::SendText "К"
-l::SendText "л"
-+l::SendText "Л"
-z::SendText "з"
-+z::SendText "З"
-x::SendText "х"
-+x::SendText "Х"
-c::SendText "с"
-+c::SendText "С"
-b::SendText "в"
-+b::SendText "В"
-n::SendText "и"
-+n::SendText "И"
-m::SendText "м"
-+m::SendText "М"
+SC012::SendText "е"  ; E
++SC012::SendText "Е"
+SC013::SendText "я"  ; R
++SC013::SendText "Я"
+SC014::SendText "т"  ; T
++SC014::SendText "Т"
+SC015::SendText "у"  ; Y
++SC015::SendText "У"
+SC016::SendText "ю"  ; U
++SC016::SendText "Ю"
+SC017::SendText "й"  ; I
++SC017::SendText "Й"
+SC018::SendText "о"  ; O
++SC018::SendText "О"
+SC019::SendText "р"  ; P
++SC019::SendText "Р"
+SC01E::SendText "а"  ; A
++SC01E::SendText "А"
+SC01F::SendText "ч"  ; S
++SC01F::SendText "Ч"
+SC020::SendText "д"  ; D
++SC020::SendText "Д"
+SC021::SendText "ф"  ; F
++SC021::SendText "Ф"
+SC022::SendText "г"  ; G
++SC022::SendText "Г"
+SC023::SendText "н"  ; H
++SC023::SendText "Н"
+SC024::SendText "ж"  ; J
++SC024::SendText "Ж"
+SC025::SendText "к"  ; K
++SC025::SendText "К"
+SC026::SendText "л"  ; L
++SC026::SendText "Л"
+SC02C::SendText "з"  ; Z
++SC02C::SendText "З"
+SC02D::SendText "х"  ; X
++SC02D::SendText "Х"
+SC02E::SendText "с"  ; C
++SC02E::SendText "С"
+SC02F::SendText "б"  ; V → Б
++SC02F::SendText "Б"
+SC030::SendText "в"  ; B → В
++SC030::SendText "В"
+SC031::SendText "и"  ; N
++SC031::SendText "И"
+SC032::SendText "м"  ; M
++SC032::SendText "М"
 
 #HotIf

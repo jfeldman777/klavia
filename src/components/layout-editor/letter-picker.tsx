@@ -2,10 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  CYRILLIC_ALPHABET,
   suggestedForLatin,
   type KeyMapping,
   type KeyMeta,
+  type ScriptId,
 } from "@/lib/layout-data";
 import { cn } from "@/lib/utils";
 import { Lock, Unlock } from "lucide-react";
@@ -14,6 +14,9 @@ type Props = {
   selected: KeyMeta | null;
   mapping: KeyMapping | null;
   used: Set<string>;
+  alphabet: readonly string[];
+  script: ScriptId;
+  layerHint: string;
   onAssign: (letter: string | null) => void;
   onToggleLock: () => void;
   onOpenLayer?: () => void;
@@ -32,10 +35,20 @@ const HINT: Record<string, { label: string; color: string }> = {
   extra: { label: "Доп. назначение", color: "text-[var(--extra)]" },
 };
 
+function letterFont(letter: string | null): string {
+  if (letter && /[\u0590-\u05FF]/.test(letter)) {
+    return "font-[family-name:var(--font-hebrew)]";
+  }
+  return "font-[family-name:var(--font-display)]";
+}
+
 export function LetterPicker({
   selected,
   mapping,
   used,
+  alphabet,
+  script,
+  layerHint,
   onAssign,
   onToggleLock,
   onOpenLayer,
@@ -43,7 +56,7 @@ export function LetterPicker({
   if (!selected || !mapping) {
     return (
       <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)]/50 p-6 text-[var(--ink-muted)]">
-        Выберите клавишу на клавиатуре, чтобы назначить русскую букву.
+        Выберите клавишу на клавиатуре, чтобы назначить букву.
       </div>
     );
   }
@@ -55,22 +68,19 @@ export function LetterPicker({
           Клавиша {selected.latin} · портал
         </p>
         <p className="mt-2 font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
-          Миниклавиатура
+          {script === "he" ? "Концевые формы" : "Миниклавиатура"}
         </p>
-        <p className="mt-2 text-sm text-[var(--ink-muted)]">
-          Q не печатает букву сама — открывает слой оставшихся: Б П Ш Щ Ц Ъ Ы Ь
-          Э Ё. В наборе: Q → цифра 1–0.
-        </p>
+        <p className="mt-2 text-sm text-[var(--ink-muted)]">{layerHint}</p>
         {onOpenLayer && (
           <Button className="mt-4" size="sm" onClick={onOpenLayer}>
-            Показать минику
+            Показать слой
           </Button>
         )}
       </div>
     );
   }
 
-  const suggestion = suggestedForLatin(selected.latin);
+  const suggestion = suggestedForLatin(selected.latin, script);
   const hint = suggestion ? HINT[suggestion.kind] : null;
 
   return (
@@ -80,8 +90,10 @@ export function LetterPicker({
           <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-[0.18em] text-[var(--ink-faint)]">
             Клавиша {selected.latin}
           </p>
-          <p className="mt-1 font-[family-name:var(--font-display)] text-3xl text-[var(--ink)]">
-            {mapping.cyrillic ?? "—"}
+          <p className="mt-1 text-3xl text-[var(--ink)]">
+            <span className={letterFont(mapping.cyrillic)}>
+              {mapping.cyrillic ?? "—"}
+            </span>
             <span className="ml-2 text-base text-[var(--ink-faint)]">
               ← {selected.latin}
             </span>
@@ -122,7 +134,7 @@ export function LetterPicker({
       </div>
 
       <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-11">
-        {CYRILLIC_ALPHABET.map((letter) => {
+        {alphabet.map((letter) => {
           const taken = used.has(letter) && mapping.cyrillic !== letter;
           const active = mapping.cyrillic === letter;
           const matchHint = suggestion?.letter === letter;
@@ -133,7 +145,8 @@ export function LetterPicker({
               disabled={mapping.locked}
               onClick={() => onAssign(letter)}
               className={cn(
-                "flex h-10 items-center justify-center rounded-lg border font-[family-name:var(--font-display)] text-lg transition-colors",
+                "flex h-10 items-center justify-center rounded-lg border text-lg transition-colors",
+                letterFont(letter),
                 active &&
                   "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]",
                 !active &&

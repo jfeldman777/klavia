@@ -31,9 +31,11 @@ export default function Home() {
               Г←G · Д←D · Ж←J · З←Z · Л←L · Ю←U · Ф←F
             </span>
             . Доп.:{" "}
-            <span className="text-[var(--extra)]">Й←I · Ч←S</span>. Остальные —
+            <span className="text-[var(--extra)]">Й←I · Ч←S · Б←V</span>. Остальные —
             через{" "}
             <span className="text-[var(--layer)]">Q → миниклавиатуру</span>.
+            Иврит — на тех же клавишах; концевые:{" "}
+            <span className="text-[var(--layer)]">J затем буква</span>.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 animate-rise-delay-2">
             <a

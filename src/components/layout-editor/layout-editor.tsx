@@ -10,28 +10,55 @@ import { InstallPanel } from "./install-panel";
 import { Button } from "@/components/ui/button";
 import {
   ALL_KEYS,
-  CYRILLIC_ALPHABET,
-  DEFAULT_LAYOUT,
   EXTRA_ASSIGNMENTS,
+  HEBREW_EXTRA,
+  HEBREW_HOMOGLYPHS,
+  HEBREW_LAYER,
+  HEBREW_PHONETICS,
   HOMOGLYPHS,
-  LAYER_KEY_ID,
-  LAYER_STORAGE_KEY,
   PHONETICS,
+  SCRIPT_STORAGE_KEY,
+  SCRIPTS,
   SEMI_HOMOGLYPHS,
-  STORAGE_KEY,
   cloneLayer,
   cloneLayout,
   duplicateLetters,
   kindForLatinLetter,
+  layerKeyId,
   missingLetters,
   usedLetters,
   type KeyId,
   type KeyMapping,
   type LayerSlot,
+  type ScriptId,
 } from "@/lib/layout-data";
 import { RotateCcw } from "lucide-react";
 
+function loadScriptState(id: ScriptId): {
+  layout: Record<KeyId, KeyMapping>;
+  layer: LayerSlot[];
+} {
+  const profile = SCRIPTS[id];
+  let layout = cloneLayout(profile.defaultLayout);
+  let layer = cloneLayer(profile.defaultLayer);
+  try {
+    const raw = localStorage.getItem(profile.storageKey);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<KeyId, KeyMapping>;
+      layout = cloneLayout({ ...profile.defaultLayout, ...parsed });
+    }
+    const layerRaw = localStorage.getItem(profile.layerStorageKey);
+    if (layerRaw) {
+      layer = cloneLayer(JSON.parse(layerRaw) as LayerSlot[]);
+    }
+  } catch {
+    /* ignore */
+  }
+  return { layout, layer };
+}
+
 export function LayoutEditor() {
+  const [script, setScript] = useState<ScriptId>("ru");
   const [layout, setLayout] = useState<Record<KeyId, KeyMapping>>(() =>
     cloneLayout(),
   );
@@ -41,19 +68,22 @@ export function LayoutEditor() {
   const [layerOpen, setLayerOpen] = useState(false);
   const [selectedLayerShortcut, setSelectedLayerShortcut] = useState<
     string | null
-  >("1");
+  >("2");
   const [hydrated, setHydrated] = useState(false);
+
+  const profile = SCRIPTS[script];
+  const activeLayerKey = layerKeyId(layout);
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Record<KeyId, KeyMapping>;
-        setLayout(cloneLayout({ ...DEFAULT_LAYOUT, ...parsed }));
-      }
-      const layerRaw = localStorage.getItem(LAYER_STORAGE_KEY);
-      if (layerRaw) {
-        setLayer(cloneLayer(JSON.parse(layerRaw) as LayerSlot[]));
+      const saved = localStorage.getItem(SCRIPT_STORAGE_KEY);
+      const id: ScriptId = saved === "he" ? "he" : "ru";
+      const loaded = loadScriptState(id);
+      setScript(id);
+      setLayout(loaded.layout);
+      setLayer(loaded.layer);
+      if (id === "he") {
+        setSelectedLayerShortcut(HEBREW_LAYER[0]?.shortcut ?? "K");
       }
     } catch {
       /* ignore */
@@ -63,13 +93,18 @@ export function LayoutEditor() {
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
-  }, [layout, hydrated]);
+    localStorage.setItem(SCRIPT_STORAGE_KEY, script);
+  }, [script, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(LAYER_STORAGE_KEY, JSON.stringify(layer));
-  }, [layer, hydrated]);
+    localStorage.setItem(profile.storageKey, JSON.stringify(layout));
+  }, [layout, hydrated, profile.storageKey]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(profile.layerStorageKey, JSON.stringify(layer));
+  }, [layer, hydrated, profile.layerStorageKey]);
 
   const selected = useMemo(
     () => ALL_KEYS.find((k) => k.id === selectedId) ?? null,
@@ -77,7 +112,10 @@ export function LayoutEditor() {
   );
 
   const used = useMemo(() => usedLetters(layout, layer), [layout, layer]);
-  const missing = useMemo(() => missingLetters(layout, layer), [layout, layer]);
+  const missing = useMemo(
+    () => missingLetters(layout, layer, profile.alphabet),
+    [layout, layer, profile.alphabet],
+  );
   const duplicates = useMemo(
     () => duplicateLetters(layout, layer),
     [layout, layer],
@@ -129,12 +167,12 @@ export function LayoutEditor() {
           [selectedId]: {
             ...current,
             cyrillic: letter ? letter.toUpperCase() : null,
-            kind: letter ? kindForLatinLetter(latin, letter) : "empty",
+            kind: letter ? kindForLatinLetter(latin, letter, script) : "empty",
           },
         };
       });
     },
-    [selectedId],
+    [selectedId, script],
   );
 
   const assignLayerLetter = useCallback(
@@ -163,29 +201,62 @@ export function LayoutEditor() {
   }, [selectedId]);
 
   const reset = () => {
-    setLayout(cloneLayout());
-    setLayer(cloneLayer());
-    setSelectedId("KeyO");
+    setLayout(cloneLayout(profile.defaultLayout));
+    setLayer(cloneLayer(profile.defaultLayer));
+    setSelectedId(script === "he" ? "KeyA" : "KeyO");
     setLayerOpen(false);
+  };
+
+  const switchScript = (id: ScriptId) => {
+    if (id === script) return;
+    localStorage.setItem(profile.storageKey, JSON.stringify(layout));
+    localStorage.setItem(profile.layerStorageKey, JSON.stringify(layer));
+    const loaded = loadScriptState(id);
+    setScript(id);
+    setLayout(loaded.layout);
+    setLayer(loaded.layer);
+    setLayerOpen(false);
+    setSelectedId(id === "he" ? "KeyA" : "KeyO");
+    setSelectedLayerShortcut(
+      id === "he" ? (HEBREW_LAYER[0]?.shortcut ?? "K") : "2",
+    );
   };
 
   const handleSelectKey = (id: KeyId) => {
     setSelectedId(id);
-    if (id === LAYER_KEY_ID) setLayerOpen(true);
+    if (id === activeLayerKey) setLayerOpen(true);
   };
 
   return (
     <div className="flex w-full flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-3 text-sm">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <div className="flex rounded-lg border border-[var(--line)] bg-[var(--surface-2)] p-0.5">
+            {(["ru", "he"] as const).map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => switchScript(id)}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                  script === id
+                    ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                    : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                }`}
+              >
+                {SCRIPTS[id].label}
+              </button>
+            ))}
+          </div>
           <LegendDot
             color="var(--match)"
             label={`Графика · ${counts.homoglyph}`}
           />
-          <LegendDot
-            color="var(--semi)"
-            label={`Полусовпад. · ${counts.semi}`}
-          />
+          {script === "ru" && (
+            <LegendDot
+              color="var(--semi)"
+              label={`Полусовпад. · ${counts.semi}`}
+            />
+          )}
           <LegendDot
             color="var(--sound)"
             label={`Звук · ${counts.phonetic}`}
@@ -193,11 +264,11 @@ export function LayoutEditor() {
           <LegendDot color="var(--extra)" label={`Доп. · ${counts.extra}`} />
           <LegendDot
             color="var(--layer)"
-            label={`Q-слой · ${layer.length}`}
+            label={`${profile.layerHint} · ${layer.length}`}
           />
         </div>
         <Button variant="secondary" size="sm" onClick={reset}>
-          <RotateCcw className="h-3.5 w-3.5" /> Сбросить к Совпад
+          <RotateCcw className="h-3.5 w-3.5" /> Сбросить к {profile.label}
         </Button>
       </div>
 
@@ -209,12 +280,23 @@ export function LayoutEditor() {
         onSelect={handleSelectKey}
       />
 
-      {selectedId === LAYER_KEY_ID && (
+      {selectedId === activeLayerKey && (
         <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <MiniKeyboard
             open
             layer={layer}
-            onClose={() => setSelectedId("KeyO")}
+            layerKeyLatin={
+              ALL_KEYS.find((k) => k.id === activeLayerKey)?.latin ?? "Q"
+            }
+            layerTitle={
+              script === "he" ? "Концевые формы" : "Миниклавиатура"
+            }
+            layerHint={
+              script === "he"
+                ? "J, затем K M N F C. Esc — закрыть."
+                : "Нажмите цифру или кликните букву. Esc — закрыть."
+            }
+            onClose={() => setSelectedId(script === "he" ? "KeyA" : "KeyO")}
             onPick={() => undefined}
             editable
             selectedShortcut={selectedLayerShortcut}
@@ -227,6 +309,8 @@ export function LayoutEditor() {
               null
             }
             used={used}
+            alphabet={profile.alphabet}
+            layerLabel={profile.layerHint}
             onAssign={assignLayerLetter}
           />
         </div>
@@ -252,13 +336,22 @@ export function LayoutEditor() {
           selected={selected}
           mapping={selectedId ? layout[selectedId] : null}
           used={used}
+          alphabet={profile.alphabet}
+          script={script}
+          layerHint={
+            script === "he"
+              ? "J не печатает букву — открывает слой концевых: ך ם ן ף ץ. В наборе: J → K M N F C."
+              : "Q не печатает букву сама — открывает слой оставшихся: П Ш Щ Ц Ъ Ы Ь Э Ё. В наборе: Q → цифра 2–0. Б на клавише V."
+          }
           onAssign={assign}
           onToggleLock={toggleLock}
           onOpenLayer={() => setLayerOpen(true)}
         />
         <TypingTester
+          key={script}
           layout={layout}
           layer={layer}
+          script={script}
           onPress={setPressedId}
           layerOpen={layerOpen}
           onLayerOpenChange={setLayerOpen}
@@ -269,7 +362,7 @@ export function LayoutEditor() {
 
       <ExportPanel layout={layout} layer={layer} />
 
-      <PairTables layer={layer} />
+      <PairTables script={script} layer={layer} />
     </div>
   );
 }
@@ -278,11 +371,15 @@ function LayerLetterEditor({
   shortcut,
   letter,
   used,
+  alphabet,
+  layerLabel,
   onAssign,
 }: {
   shortcut: string | null;
   letter: string | null;
   used: Set<string>;
+  alphabet: readonly string[];
+  layerLabel: string;
   onAssign: (letter: string) => void;
 }) {
   if (!shortcut) {
@@ -296,21 +393,20 @@ function LayerLetterEditor({
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)]/80 p-5">
       <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-[0.18em] text-[var(--ink-faint)]">
-        Слот Q → {shortcut}
+        Слот {layerLabel.split(" ")[0]} → {shortcut}
       </p>
-      <p className="mt-1 font-[family-name:var(--font-display)] text-3xl text-[var(--layer)]">
+      <p className="mt-1 font-[family-name:var(--font-hebrew)] text-3xl text-[var(--layer)]">
         {letter ?? "—"}
       </p>
       <div className="mt-4 grid grid-cols-6 gap-1.5 sm:grid-cols-8">
-        {CYRILLIC_ALPHABET.filter((l) => {
-          // show unused + current
-          return !used.has(l) || l === letter;
-        }).map((l) => (
+        {alphabet
+          .filter((l) => !used.has(l) || l === letter)
+          .map((l) => (
           <button
             key={l}
             type="button"
             onClick={() => onAssign(l)}
-            className={`flex h-9 items-center justify-center rounded-lg border font-[family-name:var(--font-display)] text-lg ${
+            className={`flex h-9 items-center justify-center rounded-lg border font-[family-name:var(--font-hebrew)] text-lg ${
               l === letter
                 ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)]"
@@ -360,12 +456,84 @@ function PairChip({
     >
       <span className="text-[var(--ink-faint)]">{lat}</span>
       <span aria-hidden>→</span>
-      <span className="font-[family-name:var(--font-display)] text-lg">{cyr}</span>
+      <span
+        className={`text-lg ${
+          /[\u0590-\u05FF]/.test(cyr)
+            ? "font-[family-name:var(--font-hebrew)]"
+            : "font-[family-name:var(--font-display)]"
+        }`}
+      >
+        {cyr}
+      </span>
     </li>
   );
 }
 
-function PairTables({ layer }: { layer: LayerSlot[] }) {
+function PairTables({
+  script,
+  layer,
+}: {
+  script: ScriptId;
+  layer: LayerSlot[];
+}) {
+  if (script === "he") {
+    return (
+      <section
+        id="pairs"
+        className="scroll-mt-8 space-y-10 border-t border-[var(--line)] pt-8"
+      >
+        <div>
+          <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+            Звук
+          </h2>
+          <ul className="mt-5 flex flex-wrap gap-2">
+            {Object.entries(HEBREW_PHONETICS).map(([lat, he]) => (
+              <PairChip key={lat} lat={lat} cyr={he} tone="sound" />
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+            Графика
+          </h2>
+          <ul className="mt-5 flex flex-wrap gap-2">
+            {Object.entries(HEBREW_HOMOGLYPHS).map(([lat, he]) => (
+              <PairChip key={lat} lat={lat} cyr={he} tone="match" />
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+            Дополнительно
+          </h2>
+          <ul className="mt-5 flex flex-wrap gap-2">
+            {Object.entries(HEBREW_EXTRA).map(([lat, he]) => (
+              <PairChip key={lat} lat={lat} cyr={he} tone="extra" />
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h2 className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
+            Концевые (J)
+          </h2>
+          <p className="mt-2 max-w-2xl text-[var(--ink-muted)]">
+            Сначала J, потом букву: каф, мем, нун, фей, цади.
+          </p>
+          <ul className="mt-5 flex flex-wrap gap-2">
+            {layer.map((slot) => (
+              <PairChip
+                key={slot.shortcut}
+                lat={`J${slot.shortcut}`}
+                cyr={slot.letter}
+                tone="layer"
+              />
+            ))}
+          </ul>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       id="pairs"

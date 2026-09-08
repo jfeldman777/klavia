@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { KeyMapping, KeyMeta } from "@/lib/layout-data";
+import { isHebrewChar, type KeyMapping, type KeyMeta } from "@/lib/layout-data";
 
 type Props = {
   meta: KeyMeta;
@@ -77,7 +77,7 @@ export function KeyCap({
       aria-pressed={selected}
       aria-label={
         kind === "layer"
-          ? `${meta.latin}: миниклавиатура`
+          ? `${meta.latin}: слой`
           : `${meta.latin}: ${letter ?? "пусто"}`
       }
       className={cn(
@@ -97,7 +97,10 @@ export function KeyCap({
       </span>
       <span
         className={cn(
-          "font-[family-name:var(--font-display)] text-[1.35rem] leading-none tracking-tight",
+          "text-[1.35rem] leading-none tracking-tight",
+          letter && isHebrewChar(letter)
+            ? "font-[family-name:var(--font-hebrew)]"
+            : "font-[family-name:var(--font-display)]",
           styles.text,
         )}
       >
